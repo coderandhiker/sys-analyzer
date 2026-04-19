@@ -123,12 +123,17 @@ public record FrameTimeSummary(
 public record CulpritAttribution(
     IReadOnlyList<ProcessEntry> TopProcesses,
     IReadOnlyList<DpcDriverEntry> TopDpcDrivers,
-    IReadOnlyList<DiskProcessEntry> TopDiskProcesses
+    IReadOnlyList<DiskProcessEntry> TopDiskProcesses,
+    bool HasAttribution = true,
+    bool HasDpcAttribution = false,
+    float InterferenceCorrelation = 0f,
+    IReadOnlyList<ProcessLifetimeInfo>? ProcessLifetimeEvents = null
 );
 
-public record ProcessEntry(string Name, double ContextSwitchPct, string? Description);
-public record DpcDriverEntry(string Module, double DpcTimePct);
-public record DiskProcessEntry(string Name, double DiskIoPct);
+public record ProcessEntry(string Name, double ContextSwitchPct, string? Description, string? Remediation = null, double CorrelationWithStutter = 0);
+public record DpcDriverEntry(string Module, double DpcTimePct, string? Description = null);
+public record DiskProcessEntry(string Name, double DiskIoPct, string? Description = null, string? Remediation = null, double CorrelationWithStutter = 0);
+public record ProcessLifetimeInfo(string Name, int ProcessId, bool IsStart, double TimestampSeconds, bool CorrelatesWithStutterCluster = false);
 
 public record RecommendationEntry(
     string Id,

@@ -1,0 +1,34 @@
+{
+  "description": "Simulated ETW capture where a DPC storm from ndis.sys causes frame-time stuttering",
+  "stutterSpikes": [
+    { "timestampMs": 3000 },
+    { "timestampMs": 3500 },
+    { "timestampMs": 4000 },
+    { "timestampMs": 6000 },
+    { "timestampMs": 9000 }
+  ],
+  "dpcEvents": [
+    { "timestampMs": 2800, "driverModule": "ndis.sys", "durationUs": 500 },
+    { "timestampMs": 2900, "driverModule": "ndis.sys", "durationUs": 800 },
+    { "timestampMs": 3010, "driverModule": "ndis.sys", "durationUs": 1200 },
+    { "timestampMs": 3100, "driverModule": "storport.sys", "durationUs": 200 },
+    { "timestampMs": 3450, "driverModule": "ndis.sys", "durationUs": 900 },
+    { "timestampMs": 3520, "driverModule": "ndis.sys", "durationUs": 1100 },
+    { "timestampMs": 3950, "driverModule": "ndis.sys", "durationUs": 700 },
+    { "timestampMs": 4050, "driverModule": "ndis.sys", "durationUs": 1500 },
+    { "timestampMs": 5800, "driverModule": "ndis.sys", "durationUs": 600 },
+    { "timestampMs": 6100, "driverModule": "ndis.sys", "durationUs": 400 },
+    { "timestampMs": 6200, "driverModule": "tcpip.sys", "durationUs": 300 },
+    { "timestampMs": 8900, "driverModule": "ndis.sys", "durationUs": 850 },
+    { "timestampMs": 9050, "driverModule": "ndis.sys", "durationUs": 950 }
+  ],
+  "contextSwitches": [
+    { "timestampMs": 3010, "oldProcessId": 100, "newProcessId": 4, "newProcessName": "System" },
+    { "timestampMs": 3520, "oldProcessId": 100, "newProcessId": 4, "newProcessName": "System" },
+    { "timestampMs": 6010, "oldProcessId": 100, "newProcessId": 4, "newProcessName": "System" }
+  ],
+  "diskIo": [],
+  "processLifetime": [],
+  "expectedTopDpcDriver": "ndis.sys",
+  "expectedDpcStorm": true
+}

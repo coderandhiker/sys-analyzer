@@ -1,0 +1,34 @@
+{
+  "description": "Simulated ETW capture where Windows Defender (MsMpEng.exe) causes heavy context switching during frame-time stutter spikes",
+  "stutterSpikes": [
+    { "timestampMs": 5000 },
+    { "timestampMs": 5200 },
+    { "timestampMs": 8500 },
+    { "timestampMs": 12000 },
+    { "timestampMs": 12100 }
+  ],
+  "contextSwitches": [
+    { "timestampMs": 4980, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 5010, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 5020, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 5190, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 5210, "oldProcessId": 100, "newProcessId": 300, "newProcessName": "SearchIndexer.exe" },
+    { "timestampMs": 8490, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 8510, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 11990, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 12010, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" },
+    { "timestampMs": 12090, "oldProcessId": 100, "newProcessId": 400, "newProcessName": "dwm.exe" },
+    { "timestampMs": 12110, "oldProcessId": 100, "newProcessId": 200, "newProcessName": "MsMpEng.exe" }
+  ],
+  "diskIo": [
+    { "timestampMs": 4500, "processId": 200, "processName": "MsMpEng.exe", "bytesTransferred": 1048576 },
+    { "timestampMs": 5100, "processId": 200, "processName": "MsMpEng.exe", "bytesTransferred": 524288 },
+    { "timestampMs": 8000, "processId": 200, "processName": "MsMpEng.exe", "bytesTransferred": 2097152 },
+    { "timestampMs": 12500, "processId": 500, "processName": "OneDrive.exe", "bytesTransferred": 4194304 }
+  ],
+  "processLifetime": [
+    { "timestampMs": 4900, "processId": 200, "processName": "MsMpEng.exe", "isStart": true }
+  ],
+  "expectedTopProcess": "MsMpEng.exe",
+  "expectedTopProcessDescription": "Windows Defender real-time scanner"
+}
