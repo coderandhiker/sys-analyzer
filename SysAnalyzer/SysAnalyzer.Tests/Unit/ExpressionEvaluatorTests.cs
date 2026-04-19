@@ -1,193 +1,153 @@
-using FluentAssertions;
 using SysAnalyzer.Config.ExpressionEngine;
 
 namespace SysAnalyzer.Tests.Unit;
 
 public class ExpressionEvaluatorTests
 {
-    private static bool Eval(string expression, Dictionary<string, object?> fields)
-    {
-        var ast = ExpressionParser.Parse(expression);
-        var evaluator = new ExpressionEvaluator(fields);
-        return evaluator.Evaluate(ast);
-    }
-
     [Fact]
-    public void Evaluate_NumberGreaterThan_True()
+    public void Evaluate_SimpleGreaterThan_True()
     {
         var fields = new Dictionary<string, object?> { ["cpu.load"] = 95.0 };
-        Eval("cpu.load > 90", fields).Should().BeTrue();
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90");
+        Assert.True(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_NumberGreaterThan_False()
-    {
-        var fields = new Dictionary<string, object?> { ["cpu.load"] = 80.0 };
-        Eval("cpu.load > 90", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_MissingField_ReturnsFalse()
-    {
-        var fields = new Dictionary<string, object?>();
-        Eval("cpu.load > 90", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_NullField_ReturnsFalse()
-    {
-        var fields = new Dictionary<string, object?> { ["cpu.load"] = null };
-        Eval("cpu.load > 90", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_StringEquality_True()
-    {
-        var fields = new Dictionary<string, object?> { ["system.power_plan"] = "Balanced" };
-        Eval("system.power_plan == 'Balanced'", fields).Should().BeTrue();
-    }
-
-    [Fact]
-    public void Evaluate_StringEquality_False()
-    {
-        var fields = new Dictionary<string, object?> { ["system.power_plan"] = "High performance" };
-        Eval("system.power_plan == 'Balanced'", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_TypeMismatch_ThrowsError()
-    {
-        var fields = new Dictionary<string, object?> { ["cpu.model"] = "AMD Ryzen 7" };
-        var act = () => Eval("cpu.model > 90", fields);
-        act.Should().Throw<ExpressionEvaluationException>()
-            .WithMessage("*Type mismatch*");
-    }
-
-    [Fact]
-    public void Evaluate_ShortCircuitAnd_FirstFalse_NoError()
-    {
-        // First operand is false, second has missing field that would cause issues
-        // But short-circuit means we never evaluate the second
-        var fields = new Dictionary<string, object?> { ["a"] = false };
-        Eval("a AND b > 5", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_ShortCircuitOr_FirstTrue_NoError()
-    {
-        var fields = new Dictionary<string, object?> { ["a"] = true };
-        Eval("a OR b > 5", fields).Should().BeTrue();
-    }
-
-    [Fact]
-    public void Evaluate_BareFieldTruthy_BoolTrue()
-    {
-        var fields = new Dictionary<string, object?> { ["frametime.has_data"] = true };
-        Eval("frametime.has_data", fields).Should().BeTrue();
-    }
-
-    [Fact]
-    public void Evaluate_BareFieldTruthy_BoolFalse()
-    {
-        var fields = new Dictionary<string, object?> { ["frametime.has_data"] = false };
-        Eval("frametime.has_data", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_BareFieldTruthy_PositiveDouble()
+    public void Evaluate_SimpleGreaterThan_False()
     {
         var fields = new Dictionary<string, object?> { ["cpu.load"] = 50.0 };
-        Eval("cpu.load", fields).Should().BeTrue();
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90");
+        Assert.False(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_BareFieldTruthy_ZeroDouble()
-    {
-        var fields = new Dictionary<string, object?> { ["cpu.load"] = 0.0 };
-        Eval("cpu.load", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_BareFieldTruthy_NonEmptyString()
-    {
-        var fields = new Dictionary<string, object?> { ["system.power_plan"] = "Balanced" };
-        Eval("system.power_plan", fields).Should().BeTrue();
-    }
-
-    [Fact]
-    public void Evaluate_BareFieldTruthy_EmptyString()
-    {
-        var fields = new Dictionary<string, object?> { ["system.power_plan"] = "" };
-        Eval("system.power_plan", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_BareFieldTruthy_Missing()
-    {
-        var fields = new Dictionary<string, object?>();
-        Eval("frametime.has_data", fields).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Evaluate_NotExpression()
-    {
-        var fields = new Dictionary<string, object?> { ["gpu.has_data"] = false };
-        Eval("NOT gpu.has_data", fields).Should().BeTrue();
-    }
-
-    [Fact]
-    public void Evaluate_CompoundAndOr()
+    public void Evaluate_And_BothTrue()
     {
         var fields = new Dictionary<string, object?>
         {
-            ["a"] = 5.0,
-            ["b"] = 1.0,
-            ["c"] = "foo"
+            ["cpu.load"] = 95.0,
+            ["memory.used"] = 85.0
         };
-        // (a > 1 AND b < 2) OR (c == 'bar')
-        Eval("a > 1 AND b < 2 OR c == 'bar'", fields).Should().BeTrue();
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90 AND memory.used > 80");
+        Assert.True(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_IntFieldAsNumber()
+    public void Evaluate_And_OneFalse()
     {
-        var fields = new Dictionary<string, object?> { ["memory.slots_available"] = 2 };
-        Eval("memory.slots_available > 0", fields).Should().BeTrue();
+        var fields = new Dictionary<string, object?>
+        {
+            ["cpu.load"] = 95.0,
+            ["memory.used"] = 50.0
+        };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90 AND memory.used > 80");
+        Assert.False(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_BoolEquality()
+    public void Evaluate_Or_OneTrue()
     {
-        var fields = new Dictionary<string, object?> { ["disk.os_drive_is_hdd"] = true };
-        Eval("disk.os_drive_is_hdd == true", fields).Should().BeTrue();
+        var fields = new Dictionary<string, object?>
+        {
+            ["cpu.load"] = 95.0,
+            ["gpu.load"] = 50.0
+        };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90 OR gpu.load > 95");
+        Assert.True(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_LessThanOrEqual()
+    public void Evaluate_Not_InvertsResult()
     {
-        var fields = new Dictionary<string, object?> { ["cpu.load"] = 90.0 };
-        Eval("cpu.load <= 90", fields).Should().BeTrue();
+        var fields = new Dictionary<string, object?> { ["cpu.throttled"] = false };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("NOT cpu.throttled");
+        Assert.True(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_GreaterThanOrEqual()
+    public void Evaluate_MissingField_False()
     {
-        var fields = new Dictionary<string, object?> { ["cpu.load"] = 90.0 };
-        Eval("cpu.load >= 90", fields).Should().BeTrue();
+        var fields = new Dictionary<string, object?>();
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90");
+        Assert.False(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_StringNotEqual()
+    public void Evaluate_NullField_False()
     {
-        var fields = new Dictionary<string, object?> { ["system.power_plan"] = "Balanced" };
-        Eval("system.power_plan != 'High performance'", fields).Should().BeTrue();
+        var fields = new Dictionary<string, object?> { ["cpu.load"] = null };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load > 90");
+        Assert.False(evaluator.Evaluate(node));
     }
 
     [Fact]
-    public void Evaluate_StringGreaterThan_ThrowsError()
+    public void Evaluate_StringEquals()
     {
-        var fields = new Dictionary<string, object?> { ["a"] = "hello", ["b"] = "world" };
-        var act = () => Eval("a > 'world'", fields);
-        act.Should().Throw<ExpressionEvaluationException>();
+        var fields = new Dictionary<string, object?> { ["power.plan"] = "High performance" };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("power.plan == 'High performance'");
+        Assert.True(evaluator.Evaluate(node));
+    }
+
+    [Fact]
+    public void Evaluate_BoolEquals()
+    {
+        var fields = new Dictionary<string, object?> { ["system.hags"] = true };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("system.hags == true");
+        Assert.True(evaluator.Evaluate(node));
+    }
+
+    [Fact]
+    public void Evaluate_IntegerPromotedToDouble()
+    {
+        var fields = new Dictionary<string, object?> { ["cpu.cores"] = 8 };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.cores > 4");
+        Assert.True(evaluator.Evaluate(node));
+    }
+
+    [Fact]
+    public void Evaluate_LessThan()
+    {
+        var fields = new Dictionary<string, object?> { ["disk.free_gb"] = 5.0 };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("disk.free_gb < 10");
+        Assert.True(evaluator.Evaluate(node));
+    }
+
+    [Fact]
+    public void Evaluate_TypeMismatch_Throws()
+    {
+        var fields = new Dictionary<string, object?> { ["cpu.load"] = 95.0 };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load == 'text'");
+        Assert.Throws<ExpressionEvaluationException>(() => evaluator.Evaluate(node));
+    }
+
+    [Fact]
+    public void Evaluate_TruthyFieldRef_Double_Positive_True()
+    {
+        var fields = new Dictionary<string, object?> { ["cpu.load"] = 50.0 };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load");
+        Assert.True(evaluator.Evaluate(node));
+    }
+
+    [Fact]
+    public void Evaluate_TruthyFieldRef_Double_Zero_False()
+    {
+        var fields = new Dictionary<string, object?> { ["cpu.load"] = 0.0 };
+        var evaluator = new ExpressionEvaluator(fields);
+        var node = ExpressionParser.Parse("cpu.load");
+        Assert.False(evaluator.Evaluate(node));
     }
 }

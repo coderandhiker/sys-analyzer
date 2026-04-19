@@ -3,9 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace SysAnalyzer.Report;
 
-/// <summary>
-/// JSON serialization settings and helpers for AnalysisSummary.
-/// </summary>
 public static class JsonReportGenerator
 {
     public static readonly JsonSerializerOptions Options = new()
@@ -21,4 +18,19 @@ public static class JsonReportGenerator
 
     public static Analysis.Models.AnalysisSummary? Deserialize(string json) =>
         JsonSerializer.Deserialize<Analysis.Models.AnalysisSummary>(json, Options);
+
+    public static async Task<string> WriteToFileAsync(
+        Analysis.Models.AnalysisSummary summary,
+        string outputDir,
+        string filenameFormat,
+        string timestampFormat,
+        string? label = null)
+    {
+        Directory.CreateDirectory(outputDir);
+        var filename = FilenameGenerator.Generate(filenameFormat, timestampFormat, label);
+        var path = Path.Combine(outputDir, filename + ".json");
+        var json = Serialize(summary);
+        await File.WriteAllTextAsync(path, json);
+        return path;
+    }
 }

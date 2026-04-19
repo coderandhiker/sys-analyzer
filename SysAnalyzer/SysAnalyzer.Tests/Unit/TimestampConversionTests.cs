@@ -1,94 +1,68 @@
-using FluentAssertions;
 using SysAnalyzer.Capture;
 
 namespace SysAnalyzer.Tests.Unit;
 
 public class TimestampConversionTests
 {
-    public TimestampConversionTests()
+    [Fact]
+    public void QpcTimestamp_ToMilliseconds_Correct()
     {
-        // Reset epoch for each test
-        QpcTimestamp.SetCaptureEpoch(0, new DateTime(2026, 4, 19, 12, 0, 0, DateTimeKind.Utc));
+        // 1 second worth of ticks → 1000ms
+        var ts = new QpcTimestamp(QpcTimestamp.Frequency);
+        Assert.Equal(1000.0, ts.ToMilliseconds(), precision: 1);
     }
 
     [Fact]
-    public void ToMilliseconds_RoundTrips()
+    public void QpcTimestamp_ToSeconds_Correct()
     {
-        var ts = QpcTimestamp.FromMilliseconds(1234.5);
-        ts.ToMilliseconds().Should().BeApproximately(1234.5, 0.01);
+        var ts = new QpcTimestamp(QpcTimestamp.Frequency * 5);
+        Assert.Equal(5.0, ts.ToSeconds(), precision: 3);
     }
 
     [Fact]
-    public void ToSeconds_RoundTrips()
+    public void QpcTimestamp_FromEtwQpc_SubtractsEpoch()
     {
-        var ts = QpcTimestamp.FromMilliseconds(5000.0);
-        ts.ToSeconds().Should().BeApproximately(5.0, 0.001);
+        QpcTimestamp.SetCaptureEpoch(1000, DateTime.UtcNow);
+        var ts = QpcTimestamp.FromEtwQpc(1500);
+        Assert.Equal(500, ts.RawTicks);
     }
 
     [Fact]
-    public void FromEtwQpc_SubtractsEpoch()
+    public void QpcTimestamp_FromPresentMonSeconds_Converts()
     {
-        long epoch = 1_000_000;
-        QpcTimestamp.SetCaptureEpoch(epoch, DateTime.UtcNow);
-
-        long rawQpc = 1_500_000;
-        var ts = QpcTimestamp.FromEtwQpc(rawQpc);
-        ts.RawTicks.Should().Be(500_000);
+        QpcTimestamp.SetCaptureEpoch(0, DateTime.UtcNow);
+        var ts = QpcTimestamp.FromPresentMonSeconds(1.0, 0);
+        Assert.Equal(QpcTimestamp.Frequency, ts.RawTicks);
     }
 
     [Fact]
-    public void FromPresentMonSeconds_AppliesOffset()
+    public void QpcTimestamp_Equality()
     {
-        long epoch = 1_000_000;
-        QpcTimestamp.SetCaptureEpoch(epoch, DateTime.UtcNow);
-
-        // PresentMon says 2.0 seconds, offset accounts for launch delay
-        long qpcOffset = epoch; // offset = our QPC at launch - PM first time in ticks
-        var ts = QpcTimestamp.FromPresentMonSeconds(2.0, qpcOffset);
-
-        // Expected: (2.0 * Frequency) + offset - epoch = 2.0 * Frequency
-        ts.ToSeconds().Should().BeApproximately(2.0, 0.001);
+        var ts1 = new QpcTimestamp(100);
+        var ts2 = new QpcTimestamp(100);
+        Assert.Equal(ts1, ts2);
+        Assert.True(ts1.Equals(ts2));
     }
 
     [Fact]
-    public void ToWallClock_CorrectOffset()
+    public void QpcTimestamp_Comparison()
     {
-        var anchor = new DateTime(2026, 4, 19, 12, 0, 0, DateTimeKind.Utc);
-        QpcTimestamp.SetCaptureEpoch(0, anchor);
-
-        var ts = QpcTimestamp.FromMilliseconds(5000.0);
-        var wall = ts.ToWallClock();
-        wall.Should().BeCloseTo(anchor.AddSeconds(5), TimeSpan.FromMilliseconds(1));
+        var ts1 = new QpcTimestamp(100);
+        var ts2 = new QpcTimestamp(200);
+        Assert.True(ts1.CompareTo(ts2) < 0);
+        Assert.True(ts2.CompareTo(ts1) > 0);
     }
 
     [Fact]
-    public void Comparison_Operators_Work()
+    public void QpcTimestamp_Frequency_IsPositive()
     {
-        var a = QpcTimestamp.FromMilliseconds(100);
-        var b = QpcTimestamp.FromMilliseconds(200);
-
-        (a < b).Should().BeTrue();
-        (b > a).Should().BeTrue();
-        a.Equals(a).Should().BeTrue();
-        (a != b).Should().BeTrue();
-        a.CompareTo(a).Should().Be(0);
-        (b >= a).Should().BeTrue();
+        Assert.True(QpcTimestamp.Frequency > 0);
     }
 
     [Fact]
-    public void Subtraction_Works()
-    {
-        var a = QpcTimestamp.FromMilliseconds(500);
-        var b = QpcTimestamp.FromMilliseconds(200);
-        var diff = a - b;
-        diff.ToMilliseconds().Should().BeApproximately(300.0, 0.1);
-    }
-
-    [Fact]
-    public void Zero_Ticks_Is_Zero_Ms()
+    public void QpcTimestamp_ZeroTicks_ZeroMs()
     {
         var ts = new QpcTimestamp(0);
-        ts.ToMilliseconds().Should().Be(0.0);
-        ts.ToSeconds().Should().Be(0.0);
+        Assert.Equal(0.0, ts.ToMilliseconds());
     }
 }

@@ -61,3 +61,4 @@ Work through these in order. Each maps to a section in `plan/phase-f.md`:
 3. Implement deliverables in order (F.1 → F.2 → … → F.7). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-f.md`.
+6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-f-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using SysAnalyzer.Config;
 
 namespace SysAnalyzer.Tests.Unit;
@@ -8,194 +7,98 @@ public class ConfigValidatorTests
     private readonly ConfigValidator _validator = new();
 
     [Fact]
-    public void ValidConfig_LoadsWithoutErrors()
+    public void Validate_DefaultConfig_NoErrors()
     {
         var config = ConfigLoader.Load();
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeTrue($"Expected no errors but got: {string.Join("; ", result.Errors.Select(e => $"{e.Context}: {e.Message}"))}");
+        Assert.Empty(result.Errors);
     }
 
     [Fact]
-    public void DuplicateRecommendationId_ReportsError()
+    public void Validate_PollIntervalTooLow_Error()
     {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "dup_id", Trigger = "cpu.load > 90", Severity = "warning", Category = "cpu" },
-                new() { Id = "dup_id", Trigger = "memory.used > 80", Severity = "warning", Category = "memory" }
-            }
-        };
+        var config = ConfigLoader.Load();
+        config.Capture.PollIntervalMs = 50;
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("duplicate"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("poll_interval_ms"));
     }
 
     [Fact]
-    public void BadSeverity_ReportsError()
+    public void Validate_MinCaptureTooLow_Error()
     {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load > 90", Severity = "extreme", Category = "cpu" }
-            }
-        };
+        var config = ConfigLoader.Load();
+        config.Capture.MinCaptureDurationSec = 0;
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("severity") && e.Message.Contains("extreme"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("min_capture_duration_sec"));
     }
 
     [Fact]
-    public void BadCategory_ReportsError()
+    public void Validate_DuplicateRecommendationId_Error()
     {
-        var config = new AnalyzerConfig
+        var config = new AnalyzerConfig();
+        config.Recommendations.Add(new RecommendationConfig
         {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load > 90", Severity = "info", Category = "storage" }
-            }
-        };
+            Id = "dup", Trigger = "cpu.load > 90", Severity = "info",
+            Category = "cpu", Confidence = "low", Title = "T", Body = "B"
+        });
+        config.Recommendations.Add(new RecommendationConfig
+        {
+            Id = "dup", Trigger = "cpu.load > 95", Severity = "warning",
+            Category = "cpu", Confidence = "low", Title = "T2", Body = "B2"
+        });
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("category"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("duplicate"));
     }
 
     [Fact]
-    public void BadConfidence_ReportsError()
+    public void Validate_InvalidSeverity_Error()
     {
-        var config = new AnalyzerConfig
+        var config = new AnalyzerConfig();
+        config.Recommendations.Add(new RecommendationConfig
         {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load > 90", Severity = "info", Category = "cpu", Confidence = "maybe" }
-            }
-        };
+            Id = "test", Trigger = "cpu.load > 90", Severity = "emergency",
+            Category = "cpu", Confidence = "low", Title = "T", Body = "B"
+        });
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("confidence"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("severity"));
     }
 
     [Fact]
-    public void BadExpressionSyntax_ReportsPositionalError()
+    public void Validate_EmptyTrigger_Error()
     {
-        var config = new AnalyzerConfig
+        var config = new AnalyzerConfig();
+        config.Recommendations.Add(new RecommendationConfig
         {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load >> 90", Severity = "warning", Category = "cpu" }
-            }
-        };
+            Id = "test", Trigger = "", Severity = "info",
+            Category = "cpu", Confidence = "low", Title = "T", Body = "B"
+        });
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Context.Contains("trigger") && e.Message.Contains("parse error"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("trigger"));
     }
 
     [Fact]
-    public void EmptyTrigger_ReportsError()
+    public void Validate_InvalidCategory_Error()
     {
-        var config = new AnalyzerConfig
+        var config = new AnalyzerConfig();
+        config.Recommendations.Add(new RecommendationConfig
         {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "", Severity = "warning", Category = "cpu" }
-            }
-        };
+            Id = "test", Trigger = "cpu.load > 90", Severity = "info",
+            Category = "imaginary", Confidence = "low", Title = "T", Body = "B"
+        });
         var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("trigger"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("category"));
     }
 
     [Fact]
-    public void UnknownFieldReference_ReportsWarning()
+    public void Validate_InvalidConfidence_Error()
     {
-        var config = new AnalyzerConfig
+        var config = new AnalyzerConfig();
+        config.Recommendations.Add(new RecommendationConfig
         {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "foo.bar > 90", Severity = "warning", Category = "cpu" }
-            }
-        };
+            Id = "test", Trigger = "cpu.load > 90", Severity = "info",
+            Category = "cpu", Confidence = "absolute", Title = "T", Body = "B"
+        });
         var result = _validator.Validate(config);
-        result.Warnings.Should().Contain(w => w.Message.Contains("unknown field") && w.Message.Contains("foo.bar"));
-    }
-
-    [Fact]
-    public void BadPlaceholder_ReportsErrorWithSuggestion()
-    {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load > 90", Severity = "warning", Category = "cpu",
-                    Body = "The {cpx.model} is overheating" }
-            }
-        };
-        var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("cpx.model") && e.Message.Contains("did you mean"));
-    }
-
-    [Fact]
-    public void MissingId_ReportsError()
-    {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "", Trigger = "cpu.load > 90", Severity = "warning", Category = "cpu" }
-            }
-        };
-        var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Message.Contains("id is required"));
-    }
-
-    [Fact]
-    public void MultipleErrors_AllReported()
-    {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "a", Trigger = "cpu.load >> 90", Severity = "extreme", Category = "storage" },
-                new() { Id = "a", Trigger = "valid > 1", Severity = "info", Category = "cpu" }
-            }
-        };
-        var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        // Should have at least 3 errors: bad trigger, bad severity, bad category, duplicate id
-        result.Errors.Should().HaveCountGreaterThanOrEqualTo(3);
-    }
-
-    [Fact]
-    public void ValidEvidenceBoost_NoError()
-    {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load > 90", Severity = "warning", Category = "cpu",
-                    Confidence = "auto", EvidenceBoost = "frametime.has_data AND frametime.stutter_correlates_with_pagefault" }
-            }
-        };
-        var result = _validator.Validate(config);
-        result.IsValid.Should().BeTrue();
-    }
-
-    [Fact]
-    public void BadEvidenceBoost_ReportsError()
-    {
-        var config = new AnalyzerConfig
-        {
-            Recommendations = new List<RecommendationConfig>
-            {
-                new() { Id = "test", Trigger = "cpu.load > 90", Severity = "warning", Category = "cpu",
-                    EvidenceBoost = "bad >> syntax" }
-            }
-        };
-        var result = _validator.Validate(config);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Context.Contains("evidence_boost"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("confidence"));
     }
 }

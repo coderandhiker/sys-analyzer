@@ -66,3 +66,4 @@ Work through these in order. Each maps to a section in `plan/phase-g.md`:
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-g.md`.
 6. Cross-browser verify the HTML report in Edge, Chrome, and Firefox as a final check.
+7. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-g-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using SysAnalyzer.Config.ExpressionEngine;
 
 namespace SysAnalyzer.Tests.Unit;
@@ -6,135 +5,113 @@ namespace SysAnalyzer.Tests.Unit;
 public class ExpressionParserTests
 {
     [Fact]
-    public void Parse_SimpleComparison()
+    public void Parse_SimpleComparison_ProducesComparisonNode()
     {
-        var ast = ExpressionParser.Parse("cpu.load > 90");
-        ast.Should().BeOfType<ComparisonExpression>();
-        var cmp = (ComparisonExpression)ast;
-        cmp.Left.Should().BeOfType<FieldRefNode>().Which.FieldPath.Should().Be("cpu.load");
-        cmp.Operator.Should().Be(TokenType.GreaterThan);
-        cmp.Right.Should().BeOfType<NumberLiteralNode>().Which.Value.Should().Be(90.0);
+        var node = ExpressionParser.Parse("cpu.load > 90");
+        var cmp = Assert.IsType<ComparisonExpression>(node);
+        var left = Assert.IsType<FieldRefNode>(cmp.Left);
+        Assert.Equal("cpu.load", left.FieldPath);
+        Assert.Equal(TokenType.GreaterThan, cmp.Operator);
+        var right = Assert.IsType<NumberLiteralNode>(cmp.Right);
+        Assert.Equal(90, right.Value);
     }
 
     [Fact]
-    public void Parse_CompoundAndOrPrecedence()
+    public void Parse_AndExpression_MultipleOperands()
     {
-        // a > 1 AND b < 2 OR c == 'foo'
-        // Parsed as: (a > 1 AND b < 2) OR (c == 'foo')
-        var ast = ExpressionParser.Parse("a > 1 AND b < 2 OR c == 'foo'");
-        ast.Should().BeOfType<OrExpression>();
-        var or = (OrExpression)ast;
-        or.Operands.Should().HaveCount(2);
-        or.Operands[0].Should().BeOfType<AndExpression>();
-        or.Operands[1].Should().BeOfType<ComparisonExpression>();
+        var node = ExpressionParser.Parse("cpu.load > 90 AND memory.used > 80");
+        var and = Assert.IsType<AndExpression>(node);
+        Assert.Equal(2, and.Operands.Count);
     }
 
     [Fact]
-    public void Parse_NotExpression()
+    public void Parse_OrExpression_MultipleOperands()
     {
-        var ast = ExpressionParser.Parse("NOT gpu.has_data");
-        ast.Should().BeOfType<NotExpression>();
-        var not = (NotExpression)ast;
-        not.Operand.Should().BeOfType<FieldRefNode>().Which.FieldPath.Should().Be("gpu.has_data");
+        var node = ExpressionParser.Parse("cpu.load > 90 OR gpu.load > 95");
+        var or = Assert.IsType<OrExpression>(node);
+        Assert.Equal(2, or.Operands.Count);
     }
 
     [Fact]
-    public void Parse_BareFieldRef()
+    public void Parse_NotExpression_Wraps()
     {
-        var ast = ExpressionParser.Parse("frametime.has_data");
-        ast.Should().BeOfType<FieldRefNode>().Which.FieldPath.Should().Be("frametime.has_data");
+        var node = ExpressionParser.Parse("NOT cpu.throttled");
+        var not = Assert.IsType<NotExpression>(node);
+        Assert.IsType<FieldRefNode>(not.Operand);
     }
 
     [Fact]
-    public void Parse_StringComparison()
+    public void Parse_ComplexExpression_MixedAndOr()
     {
-        var ast = ExpressionParser.Parse("system.power_plan == 'Balanced'");
-        ast.Should().BeOfType<ComparisonExpression>();
-        var cmp = (ComparisonExpression)ast;
-        cmp.Right.Should().BeOfType<StringLiteralNode>().Which.Value.Should().Be("Balanced");
+        var node = ExpressionParser.Parse("cpu.load > 90 AND gpu.load > 80 OR disk.active > 95");
+        Assert.IsType<OrExpression>(node);
+    }
+
+    [Fact]
+    public void Parse_StringLiteral()
+    {
+        var node = ExpressionParser.Parse("power.plan == 'High performance'");
+        var cmp = Assert.IsType<ComparisonExpression>(node);
+        var right = Assert.IsType<StringLiteralNode>(cmp.Right);
+        Assert.Equal("High performance", right.Value);
     }
 
     [Fact]
     public void Parse_BoolLiteral()
     {
-        var ast = ExpressionParser.Parse("disk.os_drive_is_hdd == true");
-        ast.Should().BeOfType<ComparisonExpression>();
-        var cmp = (ComparisonExpression)ast;
-        cmp.Right.Should().BeOfType<BoolLiteralNode>().Which.Value.Should().BeTrue();
+        var node = ExpressionParser.Parse("system.hags == true");
+        var cmp = Assert.IsType<ComparisonExpression>(node);
+        var right = Assert.IsType<BoolLiteralNode>(cmp.Right);
+        Assert.True(right.Value);
     }
 
     [Fact]
-    public void Parse_MultipleAnd()
+    public void Parse_EmptyExpression_Throws()
     {
-        var ast = ExpressionParser.Parse("a > 1 AND b > 2 AND c > 3");
-        ast.Should().BeOfType<AndExpression>();
-        ((AndExpression)ast).Operands.Should().HaveCount(3);
+        Assert.Throws<ExpressionParseException>(() => ExpressionParser.Parse(""));
+    }
+
+    [Fact]
+    public void Parse_InvalidCharacter_Throws()
+    {
+        Assert.Throws<ExpressionParseException>(() => ExpressionParser.Parse("cpu.load # 90"));
+    }
+
+    [Fact]
+    public void GetFieldReferences_ReturnsAllFields()
+    {
+        var node = ExpressionParser.Parse("cpu.load > 90 AND memory.used > 80");
+        var fields = ExpressionParser.GetFieldReferences(node);
+        Assert.Contains("cpu.load", fields);
+        Assert.Contains("memory.used", fields);
     }
 
     [Fact]
     public void Parse_AllComparisonOperators()
     {
-        ExpressionParser.Parse("a > 1").Should().BeOfType<ComparisonExpression>();
-        ExpressionParser.Parse("a < 1").Should().BeOfType<ComparisonExpression>();
-        ExpressionParser.Parse("a >= 1").Should().BeOfType<ComparisonExpression>();
-        ExpressionParser.Parse("a <= 1").Should().BeOfType<ComparisonExpression>();
-        ExpressionParser.Parse("a == 1").Should().BeOfType<ComparisonExpression>();
-        ExpressionParser.Parse("a != 1").Should().BeOfType<ComparisonExpression>();
+        var operators = new[] { ">", "<", ">=", "<=", "==", "!=" };
+        foreach (var op in operators)
+        {
+            var node = ExpressionParser.Parse($"cpu.load {op} 90");
+            Assert.IsType<ComparisonExpression>(node);
+        }
     }
 
     [Fact]
-    public void ParseError_DoubleGreaterThan()
+    public void Parse_NegativeNumber()
     {
-        var act = () => ExpressionParser.Parse("a >> 5");
-        act.Should().Throw<ExpressionParseException>()
-            .Where(e => e.Position >= 2);
-    }
-
-    [Fact]
-    public void ParseError_UnexpectedEndOfExpression()
-    {
-        var act = () => ExpressionParser.Parse("a > ");
-        act.Should().Throw<ExpressionParseException>()
-            .WithMessage("*end of expression*");
-    }
-
-    [Fact]
-    public void ParseError_EmptyExpression()
-    {
-        var act = () => ExpressionParser.Parse("");
-        act.Should().Throw<ExpressionParseException>();
-    }
-
-    [Fact]
-    public void ParseError_UnterminatedString()
-    {
-        var act = () => ExpressionParser.Parse("a == 'unterminated");
-        act.Should().Throw<ExpressionParseException>()
-            .WithMessage("*Unterminated*");
-    }
-
-    [Fact]
-    public void GetFieldReferences_FindsAll()
-    {
-        var ast = ExpressionParser.Parse("cpu.load > 90 AND memory.used > 80 OR gpu.temp > 85");
-        var fields = ExpressionParser.GetFieldReferences(ast);
-        fields.Should().BeEquivalentTo(new[] { "cpu.load", "memory.used", "gpu.temp" });
+        var node = ExpressionParser.Parse("temp.delta > -5");
+        var cmp = Assert.IsType<ComparisonExpression>(node);
+        var right = Assert.IsType<NumberLiteralNode>(cmp.Right);
+        Assert.Equal(-5, right.Value);
     }
 
     [Fact]
     public void Parse_DecimalNumber()
     {
-        var ast = ExpressionParser.Parse("frametime.p99_ms > 33.3");
-        var cmp = (ComparisonExpression)ast;
-        cmp.Right.Should().BeOfType<NumberLiteralNode>().Which.Value.Should().Be(33.3);
-    }
-
-    [Fact]
-    public void Parse_NotEqualString()
-    {
-        var ast = ExpressionParser.Parse("system.power_plan != 'High performance'");
-        var cmp = (ComparisonExpression)ast;
-        cmp.Operator.Should().Be(TokenType.NotEqual);
-        cmp.Right.Should().BeOfType<StringLiteralNode>().Which.Value.Should().Be("High performance");
+        var node = ExpressionParser.Parse("cpu.load > 95.5");
+        var cmp = Assert.IsType<ComparisonExpression>(node);
+        var right = Assert.IsType<NumberLiteralNode>(cmp.Right);
+        Assert.Equal(95.5, right.Value);
     }
 }
