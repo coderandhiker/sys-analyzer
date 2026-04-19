@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using System.Reflection;
+using SysAnalyzer.Analysis;
 using SysAnalyzer.Analysis.Models;
 using SysAnalyzer.Baselines;
 using SysAnalyzer.Capture;
@@ -106,6 +107,13 @@ providers.Add(new PerformanceCounterProvider());
 providers.Add(new HardwareInventoryProvider());
 providers.Add(new WindowsDeepCheckProvider());
 
+PresentMonProvider? presentMonProvider = null;
+if (config.Capture.PresentmonEnabled)
+{
+    presentMonProvider = new PresentMonProvider(options.Process);
+    providers.Add(presentMonProvider);
+}
+
 if (providers.Count == 0)
 {
     Console.Error.WriteLine("Error: No providers available.");
@@ -114,6 +122,9 @@ if (providers.Count == 0)
 
 // Set up overhead tracker
 var overheadTracker = new SelfOverheadTracker();
+
+// Frame-time sample collection
+var frameTimeSamples = new List<FrameTimeSample>();
 
 // Snapshot data holders
 SnapshotData? hwSnapshot = null;
@@ -197,6 +208,36 @@ using var session = new CaptureSession(
             new CategoryScore(0, "Pending", 0, 0)
         );
 
+        // Compute frame-time summary
+        FrameTimeSummary? frameTimeSummary = null;
+        if (presentMonProvider != null)
+        {
+            var notes = new List<string>();
+            if (presentMonProvider.CrashNote != null)
+                notes.Add(presentMonProvider.CrashNote);
+            if (presentMonProvider.BorderlessNote != null)
+                notes.Add(presentMonProvider.BorderlessNote);
+            if (presentMonProvider.Health.DegradationReason != null
+                && presentMonProvider.Health.Status == ProviderStatus.Unavailable)
+                notes.Add(presentMonProvider.Health.DegradationReason);
+
+            var stutterMultiplier = config.Thresholds.FrameTime.TryGetValue("stutter_spike_multiplier", out var sm) ? sm : 2.0;
+            var cpuBoundRatio = config.Thresholds.FrameTime.TryGetValue("cpu_bound_ratio", out var cbr) ? cbr : 1.5;
+
+            frameTimeSummary = FrameTimeAggregator.Compute(
+                frameTimeSamples,
+                presentMonProvider.TrackedApplication,
+                stutterMultiplier,
+                cpuBoundRatio,
+                notes.Count > 0 ? notes : null);
+
+            // If provider was unavailable but we have no samples, return a "not available" marker
+            if (frameTimeSummary == null && presentMonProvider.Health.Status == ProviderStatus.Unavailable)
+            {
+                frameTimeSummary = null; // stays null — JSON omits it
+            }
+        }
+
         var summary = new AnalysisSummary(
             Metadata: new AnalysisMetadata(
                 "1.0.0", captureStart, duration, options.Label, options.Profile,
@@ -206,7 +247,7 @@ using var session = new CaptureSession(
             HardwareInventory: hwSummary,
             SystemConfiguration: sysConfigSummary,
             Scores: scores,
-            FrameTime: null,
+            FrameTime: frameTimeSummary,
             CulpritAttribution: null,
             Recommendations: new List<RecommendationEntry>(),
             BaselineComparison: null,
@@ -294,11 +335,32 @@ try
     // Start capture (poll loop runs until cancelled)
     var captureTask = session.StartAsync(cts.Token);
 
+    // Collect frame-time samples from PresentMon in background
+    Task? frameCollectionTask = null;
+    if (presentMonProvider != null && presentMonProvider.Health.Status != ProviderStatus.Unavailable)
+    {
+        frameCollectionTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in presentMonProvider.Events.WithCancellation(cts.Token))
+                {
+                    if (evt is FrameTimeSample sample)
+                    {
+                        lock (frameTimeSamples) { frameTimeSamples.Add(sample); }
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch { /* frame collection failure doesn't crash capture */ }
+        });
+    }
+
     // Live display
     LiveDisplay? liveDisplay = null;
     if (!options.NoLive && !Console.IsInputRedirected)
     {
-        liveDisplay = new LiveDisplay(session, cts.Token);
+        liveDisplay = new LiveDisplay(session, cts.Token, presentMonProvider, frameTimeSamples);
         liveDisplay.Start();
     }
 
@@ -325,6 +387,14 @@ try
 
     await captureTask;
     liveDisplay?.Dispose();
+
+    // Wait for frame collection to finish
+    if (frameCollectionTask != null)
+    {
+        try { await frameCollectionTask.WaitAsync(TimeSpan.FromSeconds(5)); }
+        catch { /* timeout ok */ }
+    }
+
     await session.FinishAsync();
 
     Console.WriteLine($"Capture complete. {session.SampleCount} samples collected.");

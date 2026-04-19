@@ -109,6 +109,17 @@ public class CaptureSession : IDisposable
         _captureCts = CancellationTokenSource.CreateLinkedTokenSource(externalCt);
         TransitionTo(CaptureState.Capturing);
 
+        // Start event stream providers
+        var captureEpoch = QpcTimestamp.CaptureEpoch;
+        foreach (var esp in _providers.OfType<IEventStreamProvider>())
+        {
+            if (esp.Health.Status != ProviderStatus.Failed && esp.Health.Status != ProviderStatus.Unavailable)
+            {
+                try { await esp.StartAsync(captureEpoch); }
+                catch { /* event stream failure doesn't block capture */ }
+            }
+        }
+
         if (_pollLoopFunc != null)
         {
             await _pollLoopFunc(this, _captureCts.Token);

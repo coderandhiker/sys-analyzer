@@ -1,0 +1,11 @@
+Application,ProcessID,SwapChainAddress,Runtime,SyncInterval,PresentFlags,AllowsTearing,TimeInSeconds,msBetweenPresents,msBetweenDisplayChange,msInPresentAPI,msUntilRenderComplete,msUntilDisplayed,msCPUBusy,msGPUBusy,VideoPresentDuration,QPCTime,Dropped,PresentMode
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.500,16.67,16.67,0.45,2.10,16.50,8.20,12.30,16.50,500000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.517,16.70,16.70,0.43,2.05,16.55,8.10,12.50,16.55,517000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.534,16.65,16.65,0.44,2.08,16.48,8.15,12.20,16.48,534000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.550,16.68,16.68,0.46,2.12,16.52,8.25,12.40,16.52,550000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.567,16.72,16.72,0.42,2.00,16.60,8.05,12.60,16.60,567000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.584,16.66,16.66,0.47,2.15,16.45,8.30,12.10,16.45,584000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.600,16.69,16.69,0.41,2.03,16.53,8.12,12.35,16.53,600000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.617,16.71,16.71,0.44,2.07,16.56,8.18,12.45,16.56,617000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.634,16.64,16.64,0.48,2.11,16.47,8.22,12.25,16.47,634000000,0,Hardware: Independent Flip
+Cyberpunk2077.exe,12345,0x0000025A,DXGI,1,0,0,0.650,16.73,16.73,0.40,2.02,16.58,8.08,12.55,16.58,650000000,1,Hardware: Independent Flip

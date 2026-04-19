@@ -103,7 +103,10 @@ public record CategoryScore(
 );
 
 public record FrameTimeSummary(
+    bool Available,
+    string? TrackedApplication,
     double AvgFps,
+    double P1Fps,
     double P50FrameTimeMs,
     double P95FrameTimeMs,
     double P99FrameTimeMs,
@@ -112,7 +115,9 @@ public record FrameTimeSummary(
     double CpuBoundPct,
     double GpuBoundPct,
     string PresentMode,
-    int StutterCount
+    bool AllowsTearing,
+    int StutterCount,
+    IReadOnlyList<string>? Notes
 );
 
 public record CulpritAttribution(

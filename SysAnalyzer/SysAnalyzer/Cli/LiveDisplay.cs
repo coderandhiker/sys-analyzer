@@ -7,13 +7,18 @@ public sealed class LiveDisplay : IDisposable
 {
     private readonly CaptureSession _session;
     private readonly CancellationToken _ct;
+    private readonly PresentMonProvider? _presentMon;
+    private readonly List<FrameTimeSample>? _frameSamples;
     private Task? _displayTask;
     private readonly DateTime _captureStart;
 
-    public LiveDisplay(CaptureSession session, CancellationToken ct)
+    public LiveDisplay(CaptureSession session, CancellationToken ct,
+        PresentMonProvider? presentMon = null, List<FrameTimeSample>? frameSamples = null)
     {
         _session = session;
         _ct = ct;
+        _presentMon = presentMon;
+        _frameSamples = frameSamples;
         _captureStart = DateTime.UtcNow;
     }
 
@@ -48,7 +53,8 @@ public sealed class LiveDisplay : IDisposable
         var latest = snapshots.Count > 0 ? snapshots[^1] : null;
         var elapsed = DateTime.UtcNow - _captureStart;
 
-        Console.SetCursorPosition(0, Console.CursorTop >= 8 ? Console.CursorTop - 8 : 0);
+        int totalLines = 10; // header(2) + blank + bars(4) + fps(1) + blank + footer
+        Console.SetCursorPosition(0, Console.CursorTop >= totalLines ? Console.CursorTop - totalLines : 0);
 
         // Header
         WriteLineFixed($"  SysAnalyzer | Elapsed: {elapsed:hh\\:mm\\:ss} | Samples: {_session.SampleCount}");
@@ -70,8 +76,57 @@ public sealed class LiveDisplay : IDisposable
             WriteLineFixed("");
         }
 
+        // FPS line
+        WriteLineFixed(GetFpsLine());
+
         WriteLineFixed("");
         WriteLineFixed("  Press Q or Esc to stop capture");
+    }
+
+    private string GetFpsLine()
+    {
+        if (_presentMon == null)
+            return "";
+
+        if (_presentMon.Health.Status == ProviderStatus.Unavailable)
+            return "  FPS: N/A (PresentMon unavailable)";
+
+        var appName = _presentMon.TrackedApplication;
+
+        // Compute live FPS from recent samples (last 1 second)
+        double avgFps = 0;
+        double p1Fps = 0;
+        int stutterCount = 0;
+
+        if (_frameSamples != null)
+        {
+            FrameTimeSample[] recentSamples;
+            lock (_frameSamples)
+            {
+                if (_frameSamples.Count == 0)
+                    return appName != null
+                        ? $"  App: {appName} | FPS: collecting..."
+                        : "  FPS: waiting for frames...";
+
+                // Last ~1 second of samples
+                int lookback = Math.Min(_frameSamples.Count, 120);
+                recentSamples = _frameSamples.Skip(_frameSamples.Count - lookback).ToArray();
+                stutterCount = _frameSamples.Count(s => s.FrameTimeMs > 33.3); // rough stutter count
+            }
+
+            if (recentSamples.Length > 0)
+            {
+                double meanMs = recentSamples.Average(s => s.FrameTimeMs);
+                avgFps = meanMs > 0 ? 1000.0 / meanMs : 0;
+
+                var sorted = recentSamples.Select(s => s.FrameTimeMs).OrderBy(x => x).ToArray();
+                double p99Ms = sorted[(int)(sorted.Length * 0.99)];
+                p1Fps = p99Ms > 0 ? 1000.0 / p99Ms : 0;
+            }
+        }
+
+        var appPart = appName != null ? $"App: {appName} | " : "";
+        return $"  {appPart}FPS: {avgFps:F0} avg / {p1Fps:F0} P1 | Stutters: {stutterCount}";
     }
 
     private void WriteBar(string label, double value, double max, bool available = true)
