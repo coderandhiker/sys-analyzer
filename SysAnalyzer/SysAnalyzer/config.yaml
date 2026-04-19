@@ -1,0 +1,227 @@
+capture:
+  poll_interval_ms: 1000
+  min_capture_duration_sec: 30
+  max_capture_duration_sec: 28800
+  presentmon_enabled: true
+  etw_enabled: true
+  etw_providers:
+    - Microsoft-Windows-Kernel-Process
+    - Microsoft-Windows-Kernel-Disk
+  csv_export: false
+  etl_export: false
+
+output:
+  directory: "./reports"
+  filename_format: "sysanalyzer-{timestamp}"
+  timestamp_format: "yyyy-MM-dd_HH-mm-ss"
+  formats:
+    html: true
+    json: true
+  optional_formats:
+    csv: false
+    etl: false
+
+baselines:
+  directory: "~/.sysanalyzer/baselines"
+  auto_save: true
+  max_stored: 50
+
+profiles:
+  gaming:
+    description: "Optimized for real-time interactive workloads (games, VR)"
+    scoring:
+      cpu:
+        avg_load_weight: 0.15
+        p95_load_weight: 0.20
+        thermal_throttle_weight: 0.15
+        single_core_saturation_weight: 0.20
+        dpc_time_weight: 0.15
+        clock_drop_weight: 0.15
+      memory:
+        avg_utilization_weight: 0.20
+        page_fault_rate_weight: 0.20
+        hard_fault_rate_weight: 0.25
+        commit_ratio_weight: 0.15
+        low_available_weight: 0.20
+      gpu:
+        avg_load_weight: 0.20
+        vram_utilization_weight: 0.25
+        thermal_throttle_weight: 0.15
+        power_throttle_weight: 0.15
+        clock_drop_weight: 0.10
+        vram_overflow_weight: 0.15
+      disk:
+        avg_queue_length_weight: 0.25
+        avg_latency_weight: 0.30
+        active_time_weight: 0.25
+        is_hdd_weight: 0.20
+      network:
+        avg_utilization_weight: 0.35
+        retransmit_rate_weight: 0.40
+        bandwidth_ceiling_weight: 0.25
+
+  compiling:
+    description: "Optimized for build/compile workloads (MSBuild, Cargo, gcc)"
+    scoring:
+      cpu:
+        avg_load_weight: 0.25
+        p95_load_weight: 0.30
+        thermal_throttle_weight: 0.15
+        single_core_saturation_weight: 0.05
+        dpc_time_weight: 0.10
+        clock_drop_weight: 0.15
+      memory:
+        avg_utilization_weight: 0.25
+        page_fault_rate_weight: 0.25
+        hard_fault_rate_weight: 0.25
+        commit_ratio_weight: 0.15
+        low_available_weight: 0.10
+      gpu:
+        avg_load_weight: 0.40
+        vram_utilization_weight: 0.10
+        thermal_throttle_weight: 0.10
+        power_throttle_weight: 0.10
+        clock_drop_weight: 0.10
+        vram_overflow_weight: 0.20
+      disk:
+        avg_queue_length_weight: 0.30
+        avg_latency_weight: 0.25
+        active_time_weight: 0.30
+        is_hdd_weight: 0.15
+      network:
+        avg_utilization_weight: 0.50
+        retransmit_rate_weight: 0.25
+        bandwidth_ceiling_weight: 0.25
+
+  general_interactive:
+    description: "Default profile for mixed desktop/productivity workloads"
+    scoring:
+      cpu:
+        avg_load_weight: 0.20
+        p95_load_weight: 0.25
+        thermal_throttle_weight: 0.15
+        single_core_saturation_weight: 0.15
+        dpc_time_weight: 0.10
+        clock_drop_weight: 0.15
+      memory:
+        avg_utilization_weight: 0.25
+        page_fault_rate_weight: 0.20
+        hard_fault_rate_weight: 0.25
+        commit_ratio_weight: 0.15
+        low_available_weight: 0.15
+      gpu:
+        avg_load_weight: 0.20
+        vram_utilization_weight: 0.20
+        thermal_throttle_weight: 0.15
+        power_throttle_weight: 0.15
+        clock_drop_weight: 0.15
+        vram_overflow_weight: 0.15
+      disk:
+        avg_queue_length_weight: 0.30
+        avg_latency_weight: 0.30
+        active_time_weight: 0.25
+        is_hdd_weight: 0.15
+      network:
+        avg_utilization_weight: 0.40
+        retransmit_rate_weight: 0.35
+        bandwidth_ceiling_weight: 0.25
+
+thresholds:
+  cpu:
+    load_moderate: 70
+    load_stressed: 85
+    load_bottleneck: 95
+    temp_warning: 85
+    temp_critical: 95
+    dpc_warning: 3
+    dpc_critical: 8
+    context_switches_warning: 50000
+    single_core_saturation: 98
+    clock_drop_pct_warning: 10
+  memory:
+    utilization_moderate: 70
+    utilization_stressed: 85
+    utilization_bottleneck: 95
+    available_warning_mb: 1024
+    available_critical_mb: 512
+    hard_faults_warning: 50
+    hard_faults_critical: 200
+    commit_ratio_warning: 0.85
+    commit_ratio_critical: 0.95
+  gpu:
+    load_moderate: 80
+    load_stressed: 90
+    load_bottleneck: 98
+    vram_utilization_warning: 80
+    vram_utilization_critical: 95
+    temp_warning: 80
+    temp_critical: 90
+  disk:
+    queue_length_warning: 2
+    queue_length_critical: 5
+    latency_warning_ms: 20
+    latency_critical_ms: 100
+    active_time_warning: 70
+    active_time_critical: 90
+    hdd_penalty_score: 25
+  network:
+    utilization_warning: 60
+    utilization_critical: 80
+    retransmit_rate_warning: 0.5
+    retransmit_rate_critical: 2.0
+    min_acceptable_speed_mbps: 100
+  frame_time:
+    p99_warning_ms: 33.3
+    p99_critical_ms: 50.0
+    p999_warning_ms: 50.0
+    dropped_frame_rate_warning: 0.5
+    dropped_frame_rate_critical: 2.0
+    stutter_spike_multiplier: 2.0
+    cpu_bound_ratio: 1.5
+
+recommendations:
+  - id: ft_cpu_bound
+    trigger: "frametime.has_data AND frametime.cpu_bound_frame_pct > 30"
+    severity: critical
+    category: frametime
+    confidence: high
+    priority: 10
+    title: "CPU-Bound Rendering Detected"
+    body: "{frametime.cpu_bound_frame_pct}% of frames were CPU-bound. Average CPU frame time: {frametime.avg_cpu_frame_ms}ms. Average GPU frame time: {frametime.avg_gpu_frame_ms}ms."
+
+  - id: ft_gpu_bound
+    trigger: "frametime.has_data AND frametime.gpu_bound_frame_pct > 60"
+    severity: warning
+    category: frametime
+    confidence: high
+    priority: 8
+    title: "GPU-Bound Rendering"
+    body: "{frametime.gpu_bound_frame_pct}% of frames were GPU-bound. Your {gpu.model} is the rendering bottleneck."
+
+  - id: mem_add_sticks
+    trigger: "memory.score >= 70 AND memory.slots_available > 0"
+    severity: critical
+    category: memory
+    confidence: auto
+    priority: 10
+    title: "Add More RAM"
+    evidence_boost: "frametime.has_data AND frametime.stutter_correlates_with_pagefault"
+    body: "Your system has {memory.installed_sticks}x {memory.stick_capacity_gb}GB {memory.memory_type} at {memory.speed_mhz}MHz ({memory.total_gb}GB total). {memory.slots_available} slot(s) available."
+
+  - id: disk_hdd_os
+    trigger: "disk.os_drive_is_hdd == true"
+    severity: critical
+    category: disk
+    confidence: high
+    priority: 10
+    title: "OS Running on HDD"
+    body: "Your Windows installation is on an HDD ({disk.os_drive_model}). This is the single biggest performance bottleneck you can fix."
+
+  - id: sw_power_plan
+    trigger: "system.power_plan != 'High performance' AND system.power_plan != 'Ultimate Performance'"
+    severity: warning
+    category: config
+    confidence: low
+    priority: 8
+    title: "Suboptimal Power Plan"
+    body: "Current power plan: \"{system.power_plan}\". Switch to High Performance or Ultimate Performance."

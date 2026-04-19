@@ -1,0 +1,176 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "timestamp": "2026-04-19T14:32:05Z",
+    "durationSeconds": 120.5,
+    "label": "cyberpunk-ultra-4k",
+    "profile": "gaming",
+    "tier": "Tier2",
+    "captureId": "cap-20260419-143205"
+  },
+  "fingerprint": {
+    "cpuModel": "AMD Ryzen 7 5800X",
+    "gpuModel": "NVIDIA GeForce RTX 3080",
+    "totalRamGb": 32,
+    "ramConfig": "2x16GB DDR4-3600",
+    "osBuild": "22631.3880",
+    "displayConfig": "2560x1440@144Hz",
+    "storageConfigHash": "nvme-wd_sn850x",
+    "gpuDriverMajorVersion": "560",
+    "motherboardModel": "ASUS ROG STRIX B550-F"
+  },
+  "sensorHealth": {
+    "overallTier": "Tier2",
+    "providers": [
+      {
+        "name": "PerformanceCounters",
+        "status": "Active",
+        "degradationReason": null,
+        "metricsAvailable": 15,
+        "metricsExpected": 15,
+        "eventsLost": 0
+      },
+      {
+        "name": "LibreHardwareMonitor",
+        "status": "Active",
+        "degradationReason": null,
+        "metricsAvailable": 7,
+        "metricsExpected": 7,
+        "eventsLost": 0
+      },
+      {
+        "name": "ETW",
+        "status": "Degraded",
+        "degradationReason": "Lost 42 events due to buffer overflow",
+        "metricsAvailable": 3,
+        "metricsExpected": 4,
+        "eventsLost": 42
+      },
+      {
+        "name": "PresentMon",
+        "status": "Active",
+        "degradationReason": null,
+        "metricsAvailable": 8,
+        "metricsExpected": 8,
+        "eventsLost": 0
+      }
+    ]
+  },
+  "hardwareInventory": {
+    "cpuModel": "AMD Ryzen 7 5800X",
+    "cpuCores": 8,
+    "cpuThreads": 16,
+    "cpuBaseClockMhz": 3800,
+    "cpuMaxBoostClockMhz": 4700,
+    "cpuCacheBytes": 33554432,
+    "ramSticks": [
+      { "bankLabel": "DIMM_A1", "capacityBytes": 17179869184, "speedMhz": 3600, "memoryType": "DDR4" },
+      { "bankLabel": "DIMM_B1", "capacityBytes": 17179869184, "speedMhz": 3600, "memoryType": "DDR4" }
+    ],
+    "totalRamGb": 32,
+    "totalMemorySlots": 4,
+    "availableMemorySlots": 2,
+    "gpuModel": "NVIDIA GeForce RTX 3080",
+    "gpuVramMb": 10240,
+    "gpuDriverVersion": "560.94",
+    "disks": [
+      { "model": "WD_BLACK SN850X 1TB", "driveType": "NVMe", "sizeBytes": 1000204886016 }
+    ],
+    "motherboardModel": "ASUS ROG STRIX B550-F",
+    "biosVersion": "2803",
+    "biosDate": "2024-01-15",
+    "osBuild": "22631.3880",
+    "osVersion": "Windows 11 23H2",
+    "networkAdapters": [
+      { "name": "Intel I225-V", "speedBps": 2500000000 }
+    ],
+    "displayResolution": "2560x1440",
+    "displayRefreshRate": 144
+  },
+  "systemConfiguration": {
+    "powerPlan": "High performance",
+    "gameModeEnabled": true,
+    "hagsEnabled": true,
+    "gameDvrEnabled": false,
+    "sysMainRunning": false,
+    "wSearchRunning": true,
+    "shaderCacheSizeMb": 450,
+    "tempFolderSizeMb": 1200,
+    "pagefileConfig": "System managed",
+    "startupProgramCount": 12,
+    "avProduct": "Windows Defender"
+  },
+  "scores": {
+    "cpu": { "score": 45, "classification": "Moderate", "availableMetrics": 6, "totalMetrics": 6 },
+    "memory": { "score": 30, "classification": "Healthy", "availableMetrics": 5, "totalMetrics": 5 },
+    "gpu": { "score": 82, "classification": "Stressed", "availableMetrics": 6, "totalMetrics": 6 },
+    "disk": { "score": 15, "classification": "Healthy", "availableMetrics": 4, "totalMetrics": 4 },
+    "network": { "score": 5, "classification": "Healthy", "availableMetrics": 3, "totalMetrics": 3 }
+  },
+  "frameTime": {
+    "avgFps": 72.5,
+    "p50FrameTimeMs": 13.8,
+    "p95FrameTimeMs": 18.2,
+    "p99FrameTimeMs": 28.5,
+    "p999FrameTimeMs": 45.1,
+    "droppedFramePct": 0.3,
+    "cpuBoundPct": 15.2,
+    "gpuBoundPct": 78.5,
+    "presentMode": "Hardware: Independent Flip",
+    "stutterCount": 7
+  },
+  "culpritAttribution": {
+    "topProcesses": [
+      { "name": "dwm.exe", "contextSwitchPct": 12.5, "description": "Desktop Window Manager" },
+      { "name": "Discord.exe", "contextSwitchPct": 8.3, "description": "Discord overlay" }
+    ],
+    "topDpcDrivers": [
+      { "module": "ndis.sys", "dpcTimePct": 2.1 }
+    ],
+    "topDiskProcesses": [
+      { "name": "SearchIndexer.exe", "diskIoPct": 35.0 }
+    ]
+  },
+  "recommendations": [
+    {
+      "id": "ft_gpu_bound",
+      "title": "GPU-Bound Rendering",
+      "body": "78.5% of frames were GPU-bound. Average GPU frame time: 12.1ms vs CPU: 8.3ms. Your NVIDIA GeForce RTX 3080 is the rendering bottleneck. Fix: (1) Lower graphics quality settings. (2) Reduce resolution / use DLSS/FSR. (3) GPU upgrade.",
+      "severity": "warning",
+      "category": "frametime",
+      "confidence": "high",
+      "priority": 8,
+      "evidence": ["gpu_bound_frame_pct=78.5", "gpu_avg_load=92.1"]
+    },
+    {
+      "id": "sw_search_indexer",
+      "title": "Windows Search Indexer Adding Disk Load",
+      "body": "Windows Search Indexer was running during capture and disk was heavily loaded. SearchIndexer.exe accounted for 35% of disk I/O. Consider pausing indexing during gaming sessions.",
+      "severity": "info",
+      "category": "config",
+      "confidence": "medium",
+      "priority": 4,
+      "evidence": ["disk_io_top_process=SearchIndexer.exe"]
+    }
+  ],
+  "baselineComparison": {
+    "baselineId": "cap-20260417-100000",
+    "fingerprintMatch": true,
+    "deltas": [
+      { "metric": "cpu.avg_load", "baselineValue": 52.3, "currentValue": 45.0, "change": -7.3 },
+      { "metric": "gpu.avg_load", "baselineValue": 88.0, "currentValue": 92.1, "change": 4.1 }
+    ]
+  },
+  "selfOverhead": {
+    "avgCpuPercent": 0.8,
+    "peakWorkingSetBytes": 67108864,
+    "gcCollections": 3,
+    "gcPauseTimeMs": 1.2,
+    "etwEventsLost": 0
+  },
+  "timeSeries": {
+    "sampleCount": 120,
+    "durationSeconds": 120.5,
+    "downsampleFactor": 1
+  }
+}
