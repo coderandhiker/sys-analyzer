@@ -32,6 +32,7 @@ Work through these in order. Each maps to a section in `plan/phase-e.md`:
 | E.6 | Recommendation Engine (§6.2) | `RecommendationEngine` — trigger evaluation, confidence auto-escalation, template resolution, deterministic output |
 | E.7 | Advanced Detections (§15) | Thermal soak, memory leak, frame-time pattern analysis, NUMA imbalance, storage tiering, driver age, cross-resource contention |
 | E.8 | Wire Full Pipeline Together | Orchestrate: aggregate → summarize → attribute → correlate → score → compare → recommend → emit |
+| E.9 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-e-dossier.md` |
 
 ## Implementation Rules
 
@@ -60,8 +61,19 @@ Work through these in order. Each maps to a section in `plan/phase-e.md`:
 ## Working Style
 
 1. Read `plan/phase-e.md` and relevant `plan.md` sections (§5, §6, §9, §12.3, §15) before starting.
-2. Track progress using a todo list — one item per deliverable (E.1 through E.8).
+2. Track progress using a todo list — one item per deliverable (E.1 through E.9). **E.9 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (E.1 → E.2 → … → E.8). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-e.md`.
-6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-e-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+6. Execute deliverable E.9: invoke the **test-dossier** agent to generate `test-dossiers/phase-e-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-e-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-e-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows E.9 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run E.9 now.

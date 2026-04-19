@@ -31,6 +31,7 @@ Work through these in order. Each maps to a section in `plan/phase-b.md`:
 | B.7 | Baseline Auto-Save (§9) | `BaselineManager` — fingerprint-keyed baseline storage with pruning |
 | B.8 | CLI Entrypoint & Argument Parsing (§8.3) | `Program.cs` with all CLI flags, `--elevate` re-launch, exit codes |
 | B.9 | Live Console Display (§8.1) | Real-time utilization bars, elapsed time, Q/Esc to stop |
+| B.10 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-b-dossier.md` |
 
 ## Implementation Rules
 
@@ -63,8 +64,19 @@ Work through these in order. Each maps to a section in `plan/phase-b.md`:
 ## Working Style
 
 1. Read `plan/phase-b.md` and relevant `plan.md` sections before starting.
-2. Track progress using a todo list — one item per deliverable (B.1 through B.9).
+2. Track progress using a todo list — one item per deliverable (B.1 through B.10). **B.10 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (B.1 → B.2 → … → B.9). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-b.md`.
-6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-b-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+6. Execute deliverable B.10: invoke the **test-dossier** agent to generate `test-dossiers/phase-b-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-b-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-b-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows B.10 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run B.10 now.

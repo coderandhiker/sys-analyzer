@@ -30,6 +30,7 @@ Work through these in order. Each maps to a section in `plan/phase-c.md`:
 | C.5 | Frame-Time Aggregation | Post-capture statistics: avg FPS, P1/P50/P95/P99/P999, dropped %, CPU/GPU bound %, stutter count |
 | C.6 | Update JSON Output | `FrameTimeSummary` in JSON; null when PresentMon unavailable |
 | C.7 | Update Live Display | Live FPS counter, tracked app name, stutter count |
+| C.8 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-c-dossier.md` |
 
 ## Implementation Rules
 
@@ -58,8 +59,19 @@ Work through these in order. Each maps to a section in `plan/phase-c.md`:
 ## Working Style
 
 1. Read `plan/phase-c.md` and relevant `plan.md` sections (§3, §4.1, §12.1, §12.2) before starting.
-2. Track progress using a todo list — one item per deliverable (C.1 through C.7).
+2. Track progress using a todo list — one item per deliverable (C.1 through C.8). **C.8 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (C.1 → C.2 → … → C.7). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-c.md`.
-6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-c-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+6. Execute deliverable C.8: invoke the **test-dossier** agent to generate `test-dossiers/phase-c-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-c-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-c-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows C.8 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run C.8 now.

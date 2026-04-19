@@ -29,6 +29,7 @@ Work through these in order. Each maps to a section in `plan/phase-d.md`:
 | D.5 | ETW Failure Modes (§12.1) | Session creation fail, buffer overflow, name collision retry, partial provider availability |
 | D.6 | Populate Analysis Result Fields | `culprit.*` namespace in flat dictionary for recommendation trigger evaluation |
 | D.7 | Update JSON Output | `culprits` array in JSON; null when ETW unavailable |
+| D.8 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-d-dossier.md` |
 
 ## Implementation Rules
 
@@ -56,8 +57,19 @@ Work through these in order. Each maps to a section in `plan/phase-d.md`:
 ## Working Style
 
 1. Read `plan/phase-d.md` and relevant `plan.md` sections (§3, §4.2, §5.1, §12.1) before starting.
-2. Track progress using a todo list — one item per deliverable (D.1 through D.7).
+2. Track progress using a todo list — one item per deliverable (D.1 through D.8). **D.8 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (D.1 → D.2 → … → D.7). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-d.md`.
-6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-d-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+6. Execute deliverable D.8: invoke the **test-dossier** agent to generate `test-dossiers/phase-d-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-d-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-d-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows D.8 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run D.8 now.

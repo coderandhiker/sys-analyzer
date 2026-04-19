@@ -29,13 +29,14 @@ Work through these in order. Each maps to a section in `plan/phase-a.md`:
 | A.6 | JSON Summary Schema | `AnalysisSummary` record tree, System.Text.Json serialization, hand-written fixture + unit tests |
 | A.7 | Config Loader & Validator (§6.1–6.4) | `AnalyzerConfig` hierarchy, `ConfigLoader`, `ConfigValidator`, default `config.yaml` + unit tests |
 | A.8 | Trigger Expression Engine (§6.3) | `ExpressionParser`, `ExpressionEvaluator`, `TemplateResolver` + comprehensive unit tests |
+| A.9 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-a-dossier.md` |
 
 ## Implementation Rules
 
 - **Target framework**: `net10.0-windows`
 - **Language**: C# 13 with top-level statements for `Program.cs`
 - **Project location**: All source under `SysAnalyzer/` at workspace root
-- **Tests**: xUnit with FluentAssertions (or equivalent). Tests go in `SysAnalyzer.Tests/`
+- **Tests**: xUnit (built-in Assert — MIT licensed, no FluentAssertions). Tests go in `SysAnalyzer.Tests/`
 - **NuGet packages** (pinned versions from §1.2):
   - `LibreHardwareMonitorLib` 0.9.6
   - `Hardware.Info` 101.1.1.1
@@ -61,8 +62,19 @@ Work through these in order. Each maps to a section in `plan/phase-a.md`:
 ## Working Style
 
 1. Read `plan/phase-a.md` and relevant `plan.md` sections before starting.
-2. Track progress using a todo list — one item per deliverable (A.1 through A.8).
+2. Track progress using a todo list — one item per deliverable (A.1 through A.9). **A.9 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (A.1 → A.2 → … → A.8). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-a.md`.
-6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-a-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+6. Execute deliverable A.9: invoke the **test-dossier** agent to generate `test-dossiers/phase-a-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-a-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-a-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows A.9 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run A.9 now.

@@ -30,6 +30,7 @@ Work through these in order. Each maps to a section in `plan/phase-f.md`:
 | F.5 | Update Live Display with Tier 2 Data | Temp/clock/power in live console when Tier 2 active |
 | F.6 | LHM Failure Modes (§12.1) | Not elevated, driver blocked (Defender/HVCI), empty sensors, read timeout, partial sensors |
 | F.7 | Verify Tier 1 Isolation | Full test suite passes without admin/LHM, no Tier 1 regression |
+| F.8 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-f-dossier.md` |
 
 ## Implementation Rules
 
@@ -57,8 +58,19 @@ Work through these in order. Each maps to a section in `plan/phase-f.md`:
 ## Working Style
 
 1. Read `plan/phase-f.md` and relevant `plan.md` sections (§4.3, §10.2, §12.1, §15.1, §15.7) before starting.
-2. Track progress using a todo list — one item per deliverable (F.1 through F.7).
+2. Track progress using a todo list — one item per deliverable (F.1 through F.8). **F.8 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (F.1 → F.2 → … → F.7). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-f.md`.
-6. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-f-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+6. Execute deliverable F.8: invoke the **test-dossier** agent to generate `test-dossiers/phase-f-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-f-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-f-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows F.8 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run F.8 now.

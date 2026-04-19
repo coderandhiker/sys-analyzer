@@ -33,6 +33,7 @@ Work through these in order. Each maps to a section in `plan/phase-g.md`:
 | G.8 | CSV Export (§7.1, `--csv`) | `CsvExporter` — time-series CSV at 1s granularity + PresentMon raw CSV per frame |
 | G.9 | ETL Export (`--etl`) | Preserve raw ETW trace file for Windows Performance Analyzer |
 | G.10 | CLI Output Polish | Final stop/report display, quick summary box, exit codes |
+| G.11 | **Test Dossier (mandatory)** | Invoke **test-dossier** agent → `test-dossiers/phase-g-dossier.md` |
 
 ## Implementation Rules
 
@@ -61,9 +62,20 @@ Work through these in order. Each maps to a section in `plan/phase-g.md`:
 ## Working Style
 
 1. Read `plan/phase-g.md` and relevant `plan.md` sections (§7, §8.2) before starting.
-2. Track progress using a todo list — one item per deliverable (G.1 through G.10).
+2. Track progress using a todo list — one item per deliverable (G.1 through G.11). **G.11 (test dossier) must be a tracked todo item.**
 3. Implement deliverables in order (G.1 → G.2 → … → G.10). Each builds on the prior.
 4. After each deliverable, build and test. Fix any issues before moving on.
 5. When all deliverables pass, verify the exit gates from `plan/phase-g.md`.
 6. Cross-browser verify the HTML report in Edge, Chrome, and Firefox as a final check.
-7. After all exit gates are verified, invoke the **test-dossier** agent to generate the final test dossier at `test-dossiers/phase-g-dossier.md`. This is a mandatory final step — the phase is not complete until the dossier is produced.
+7. Execute deliverable G.11: invoke the **test-dossier** agent to generate `test-dossiers/phase-g-dossier.md`.
+
+## ⛔ Completion Gate — DO NOT SKIP
+
+**The phase is NOT complete until `test-dossiers/phase-g-dossier.md` exists.**
+
+Before reporting success to the user, verify:
+1. The file `test-dossiers/phase-g-dossier.md` was created by the **test-dossier** agent.
+2. The dossier contains the full test results (total count, per-class breakdown, pass/fail).
+3. Your todo list shows G.11 as completed.
+
+If the dossier has not been generated, you have not finished the phase. Go back and run G.11 now.
