@@ -53,7 +53,7 @@ public sealed class LiveDisplay : IDisposable
         var latest = snapshots.Count > 0 ? snapshots[^1] : null;
         var elapsed = DateTime.UtcNow - _captureStart;
 
-        int totalLines = 10; // header(2) + blank + bars(4) + fps(1) + blank + footer
+        int totalLines = 12; // header(2) + blank + bars(4) + tier2(2) + fps(1) + blank + footer
         Console.SetCursorPosition(0, Console.CursorTop >= totalLines ? Console.CursorTop - totalLines : 0);
 
         // Header
@@ -63,14 +63,36 @@ public sealed class LiveDisplay : IDisposable
 
         if (latest != null)
         {
-            WriteBar("  CPU", latest.TotalCpuPercent, 100);
+            // Tier 1 bars (always shown)
+            string cpuSuffix = FormatTier2Suffix(latest.CpuClockMhz, "GHz", 1000, latest.CpuTempC, "\u00B0C");
+            string gpuSuffix = FormatTier2Suffix(latest.GpuClockMhz, "MHz", null, latest.GpuTempC, "\u00B0C");
+
+            WriteBar("  CPU", latest.TotalCpuPercent, 100, suffix: cpuSuffix);
             WriteBar("  RAM", latest.MemoryUtilizationPercent, 100);
-            WriteBar("  GPU", latest.GpuUtilizationPercent ?? 0, 100, latest.GpuUtilizationPercent.HasValue);
+            WriteBar("  GPU", latest.GpuUtilizationPercent ?? 0, 100, latest.GpuUtilizationPercent.HasValue, suffix: gpuSuffix);
             WriteBar("  DSK", latest.DiskActiveTimePercent, 100);
+
+            // Tier 2 power line
+            if (latest.CpuPowerW is not null || latest.GpuPowerW is not null)
+            {
+                string powerLine = "  Power:";
+                if (latest.CpuPowerW is not null)
+                    powerLine += $" CPU {latest.CpuPowerW.Value:F0}W";
+                if (latest.GpuPowerW is not null)
+                    powerLine += $" + GPU {latest.GpuPowerW.Value:F0}W";
+                if (latest.CpuPowerW is not null && latest.GpuPowerW is not null)
+                    powerLine += $" = {latest.CpuPowerW.Value + latest.GpuPowerW.Value:F0}W";
+                WriteLineFixed(powerLine);
+            }
+            else
+            {
+                WriteLineFixed("");
+            }
         }
         else
         {
             WriteLineFixed("  Waiting for first sample...");
+            WriteLineFixed("");
             WriteLineFixed("");
             WriteLineFixed("");
             WriteLineFixed("");
@@ -81,6 +103,23 @@ public sealed class LiveDisplay : IDisposable
 
         WriteLineFixed("");
         WriteLineFixed("  Press Q or Esc to stop capture");
+    }
+
+    private static string FormatTier2Suffix(double? clock, string clockUnit, double? divisor, double? temp, string tempUnit)
+    {
+        if (clock is null && temp is null) return "";
+
+        var parts = new List<string>();
+        if (clock is not null)
+        {
+            double displayClock = divisor.HasValue ? clock.Value / divisor.Value : clock.Value;
+            string format = divisor.HasValue ? "F1" : "F0";
+            parts.Add($"{displayClock.ToString(format)}{clockUnit}");
+        }
+        if (temp is not null)
+            parts.Add($"{temp.Value:F0}{tempUnit}");
+
+        return " " + string.Join(" / ", parts);
     }
 
     private string GetFpsLine()
@@ -129,7 +168,7 @@ public sealed class LiveDisplay : IDisposable
         return $"  {appPart}FPS: {avgFps:F0} avg / {p1Fps:F0} P1 | Stutters: {stutterCount}";
     }
 
-    private void WriteBar(string label, double value, double max, bool available = true)
+    private void WriteBar(string label, double value, double max, bool available = true, string suffix = "")
     {
         const int barWidth = 40;
         var pct = Math.Clamp(value / max, 0, 1);
@@ -143,7 +182,7 @@ public sealed class LiveDisplay : IDisposable
         }
         else
         {
-            WriteLineFixed($"  {label} [{bar}] {value,5:F1}%");
+            WriteLineFixed($"  {label} [{bar}] {value,5:F1}%{suffix}");
         }
     }
 

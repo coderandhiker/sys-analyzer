@@ -225,3 +225,39 @@ recommendations:
     priority: 8
     title: "Suboptimal Power Plan"
     body: "Current power plan: \"{system.power_plan}\". Switch to High Performance or Ultimate Performance."
+
+  - id: cpu_thermal_throttle
+    trigger: "tier2.cpu_thermal_throttle_pct > 10"
+    severity: critical
+    category: thermal
+    confidence: high
+    priority: 9
+    title: "CPU Thermal Throttling Detected"
+    body: "CPU temperature exceeded warning threshold while clocks dropped below base. Throttled {tier2.cpu_thermal_throttle_pct}% of capture time. Check CPU cooler and case airflow."
+
+  - id: gpu_thermal_throttle
+    trigger: "tier2.gpu_thermal_throttle_pct > 10"
+    severity: critical
+    category: thermal
+    confidence: high
+    priority: 9
+    title: "GPU Thermal Throttling Detected"
+    body: "GPU temperature exceeded warning threshold while clocks dropped. Throttled {tier2.gpu_thermal_throttle_pct}% of capture time. Check GPU fan curve and case ventilation."
+
+  - id: cpu_power_limited
+    trigger: "tier2.cpu_power_limit_pct > 15"
+    severity: warning
+    category: power
+    confidence: high
+    priority: 7
+    title: "CPU Power Limited"
+    body: "CPU is hitting its TDP limit and clocks are dropping {tier2.cpu_power_limit_pct}% of the time. Consider adjusting power limits in BIOS if cooling permits."
+
+  - id: psu_adequacy_warning
+    trigger: "tier2.psu_warning == true"
+    severity: warning
+    category: power
+    confidence: low
+    priority: 6
+    title: "PSU May Be Undersized"
+    body: "Estimated peak system power ({tier2.estimated_total_peak_w}W) is approaching PSU capacity ({tier2.psu_tier_w}W). This could cause instability under peak load."

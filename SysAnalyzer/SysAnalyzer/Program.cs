@@ -37,8 +37,8 @@ if (options.Version)
     return 0;
 }
 
-// Handle --elevate: re-launch with admin
-if (options.Elevate)
+// Auto-elevate: demand admin unless already elevated or --no-elevate
+if (!options.NoElevate && !LibreHardwareProvider.IsElevated())
 {
     try
     {
@@ -49,23 +49,29 @@ if (options.Elevate)
             return 3;
         }
 
-        // Reconstruct args without --elevate
-        var elevatedArgs = args.Where(a => a != "--elevate").ToArray();
+        // Pass all original args plus --elevate marker so we don't loop
+        var elevatedArgs = args.Where(a => a != "--elevate").Append("--elevate").ToArray();
 
         var psi = new ProcessStartInfo
         {
             FileName = exePath,
             Arguments = string.Join(' ', elevatedArgs),
             UseShellExecute = true,
-            Verb = "runas"
+            Verb = "runas",
+            WorkingDirectory = Environment.CurrentDirectory
         };
         Process.Start(psi);
         return 0;
     }
+    catch (System.ComponentModel.Win32Exception)
+    {
+        Console.Error.WriteLine("Warning: Admin access declined. Running with limited sensors (Tier 1).");
+        Console.Error.WriteLine("  GPU temps, ETW culprit detection, and some counters will be unavailable.");
+        Console.Error.WriteLine("  Use --no-elevate to suppress this prompt.\n");
+    }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"Error: Failed to elevate: {ex.Message}");
-        return 3;
+        Console.Error.WriteLine($"Warning: Failed to elevate ({ex.Message}). Continuing with Tier 1 sensors only.");
     }
 }
 
@@ -107,11 +113,29 @@ providers.Add(new PerformanceCounterProvider());
 providers.Add(new HardwareInventoryProvider());
 providers.Add(new WindowsDeepCheckProvider());
 
+// Tier 2: LibreHardwareMonitor (only attempts load when elevated)
+var lhmProvider = new LibreHardwareProvider();
+providers.Add(lhmProvider);
+
 PresentMonProvider? presentMonProvider = null;
 if (config.Capture.PresentmonEnabled)
 {
     presentMonProvider = new PresentMonProvider(options.Process);
     providers.Add(presentMonProvider);
+}
+
+// ETW provider (gracefully degrades if not elevated)
+EtwProvider? etwProvider = null;
+if (config.Capture.EtwEnabled)
+{
+    etwProvider = new EtwProvider();
+    if (options.Etl)
+    {
+        var etlFilename = FilenameGenerator.Generate(
+            config.Output.FilenameFormat, config.Output.TimestampFormat, options.Label);
+        etwProvider.EtlFilePath = Path.Combine(config.Output.Directory, etlFilename + ".etl");
+    }
+    providers.Add(etwProvider);
 }
 
 if (providers.Count == 0)
@@ -125,6 +149,9 @@ var overheadTracker = new SelfOverheadTracker();
 
 // Frame-time sample collection
 var frameTimeSamples = new List<FrameTimeSample>();
+
+// ETW event collection
+var etwEvents = new List<EtwEvent>();
 
 // Snapshot data holders
 SnapshotData? hwSnapshot = null;
@@ -199,44 +226,59 @@ using var session = new CaptureSession(
             sysConfig.StartupProgramCount, sysConfig.AvProduct
         );
 
-        // Stub scores for Phase B
+        // --- Run the full analysis pipeline ---
+        List<FrameTimeSample> frameSamplesCopy;
+        lock (frameTimeSamples) { frameSamplesCopy = new List<FrameTimeSample>(frameTimeSamples); }
+        List<EtwEvent> etwEventsCopy;
+        lock (etwEvents) { etwEventsCopy = new List<EtwEvent>(etwEvents); }
+
+        var pipeline = new AnalysisPipeline(config);
+        var pipelineResult = pipeline.Run(
+            s.Snapshots,
+            frameSamplesCopy.Count > 0 ? frameSamplesCopy : null,
+            etwEventsCopy.Count > 0 ? etwEventsCopy : null,
+            hw,
+            sysConfig,
+            options.Profile);
+
+        // Map pipeline scores to summary scores
         var scores = new ScoresSummary(
-            new CategoryScore(0, "Pending", 0, 0),
-            new CategoryScore(0, "Pending", 0, 0),
-            null,
-            new CategoryScore(0, "Pending", 0, 0),
-            new CategoryScore(0, "Pending", 0, 0)
+            MapScore(pipelineResult.ScoringResult.Cpu),
+            MapScore(pipelineResult.ScoringResult.Memory),
+            pipelineResult.ScoringResult.Gpu is not null
+                ? MapScore(pipelineResult.ScoringResult.Gpu)
+                : null,
+            MapScore(pipelineResult.ScoringResult.Disk),
+            MapScore(pipelineResult.ScoringResult.Network)
         );
 
-        // Compute frame-time summary
-        FrameTimeSummary? frameTimeSummary = null;
-        if (presentMonProvider != null)
+        // Map culprit attribution
+        var culpritSummary = CulpritResultMapper.ToSummary(pipelineResult.CulpritResult);
+
+        // Use pipeline frame-time summary (or compute if pipeline didn't have PresentMon data)
+        var frameTimeSummary = pipelineResult.FrameTimeSummary;
+        if (frameTimeSummary == null && presentMonProvider != null && frameSamplesCopy.Count > 0)
         {
             var notes = new List<string>();
             if (presentMonProvider.CrashNote != null)
                 notes.Add(presentMonProvider.CrashNote);
             if (presentMonProvider.BorderlessNote != null)
                 notes.Add(presentMonProvider.BorderlessNote);
-            if (presentMonProvider.Health.DegradationReason != null
-                && presentMonProvider.Health.Status == ProviderStatus.Unavailable)
-                notes.Add(presentMonProvider.Health.DegradationReason);
 
             var stutterMultiplier = config.Thresholds.FrameTime.TryGetValue("stutter_spike_multiplier", out var sm) ? sm : 2.0;
             var cpuBoundRatio = config.Thresholds.FrameTime.TryGetValue("cpu_bound_ratio", out var cbr) ? cbr : 1.5;
 
             frameTimeSummary = FrameTimeAggregator.Compute(
-                frameTimeSamples,
-                presentMonProvider.TrackedApplication,
-                stutterMultiplier,
-                cpuBoundRatio,
+                frameSamplesCopy, presentMonProvider.TrackedApplication,
+                stutterMultiplier, cpuBoundRatio,
                 notes.Count > 0 ? notes : null);
-
-            // If provider was unavailable but we have no samples, return a "not available" marker
-            if (frameTimeSummary == null && presentMonProvider.Health.Status == ProviderStatus.Unavailable)
-            {
-                frameTimeSummary = null; // stays null — JSON omits it
-            }
         }
+
+        // Baseline comparison (needs summary built first, so defer)
+        BaselineComparisonSummary? baselineComparison = null;
+
+        // Snapshot top memory consumers
+        var topMemoryProcesses = CaptureTopMemoryProcesses();
 
         var summary = new AnalysisSummary(
             Metadata: new AnalysisMetadata(
@@ -248,19 +290,96 @@ using var session = new CaptureSession(
             SystemConfiguration: sysConfigSummary,
             Scores: scores,
             FrameTime: frameTimeSummary,
-            CulpritAttribution: null,
-            Recommendations: new List<RecommendationEntry>(),
+            CulpritAttribution: culpritSummary,
+            Recommendations: pipelineResult.Recommendations,
             BaselineComparison: null,
             SelfOverhead: overhead,
-            TimeSeries: new TimeSeriesMetadata(s.SampleCount, duration, 1)
+            TimeSeries: new TimeSeriesMetadata(s.SampleCount, duration, 1),
+            TopMemoryProcesses: topMemoryProcesses
         );
+
+        // Now run baseline comparison with the built summary
+        if (options.Compare != null)
+        {
+            try
+            {
+                var baselineJson = await File.ReadAllTextAsync(options.Compare);
+                var baselineSummary = JsonReportGenerator.Deserialize(baselineJson);
+                if (baselineSummary != null)
+                {
+                    var comparator = new BaselineComparator();
+                    var baselineResult = comparator.Compare(summary, baselineSummary);
+                    if (baselineResult != null)
+                    {
+                        baselineComparison = new BaselineComparisonSummary(
+                            baselineResult.BaselineId,
+                            baselineResult.FingerprintMatch,
+                            baselineResult.MetricDeltas.Select(d =>
+                                new DeltaEntry(d.Metric, d.BaselineValue, d.CurrentValue, d.Change))
+                            .ToList());
+                        // Rebuild summary with baseline
+                        summary = summary with { BaselineComparison = baselineComparison };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: Baseline comparison failed: {ex.Message}");
+            }
+        }
 
         // Write JSON report
         var outputDir = config.Output.Directory;
         var reportPath = await JsonReportGenerator.WriteToFileAsync(
             summary, outputDir, config.Output.FilenameFormat,
             config.Output.TimestampFormat, options.Label);
-        Console.WriteLine($"Report saved to: {reportPath}");
+        Console.WriteLine($"  JSON: {reportPath}");
+
+        // Write HTML report
+        try
+        {
+            var htmlGenerator = new HtmlReportGenerator();
+            var htmlPath = await htmlGenerator.GenerateAsync(
+                summary, s.Snapshots, frameSamplesCopy,
+                outputDir, config.Output.FilenameFormat,
+                config.Output.TimestampFormat, options.Label);
+            Console.WriteLine($"  HTML: {htmlPath}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Warning: HTML report failed: {ex.Message}");
+        }
+
+        // CSV export (only when --csv flag is passed)
+        if (options.Csv)
+        {
+            try
+            {
+                var filenameBase = FilenameGenerator.Generate(
+                    config.Output.FilenameFormat, config.Output.TimestampFormat, options.Label);
+
+                var csvPath = await CsvExporter.ExportTimeSeriesAsync(
+                    s.Snapshots, outputDir, filenameBase);
+                Console.WriteLine($"  CSV:  {csvPath}");
+
+                if (frameSamplesCopy.Count > 0)
+                {
+                    var pmCsvPath = await CsvExporter.ExportPresentMonAsync(
+                        frameSamplesCopy, outputDir, filenameBase);
+                    Console.WriteLine($"  CSV:  {pmCsvPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: CSV export failed: {ex.Message}");
+            }
+        }
+
+        // ETL export notification
+        if (options.Etl && etwProvider?.EtlFilePath != null)
+        {
+            Console.WriteLine($"  ETL:  {etwProvider.EtlFilePath}");
+        }
 
         // Auto-save baseline
         if (config.Baselines.AutoSave)
@@ -301,16 +420,40 @@ try
     // Report health
     foreach (var (name, health) in session.HealthMatrix.Providers)
     {
-        var symbol = health.Status switch
+        string symbol;
+        string suffix = "";
+        if (name == "LibreHardwareMonitor")
         {
-            ProviderStatus.Active => "[OK]",
-            ProviderStatus.Degraded => "[!!]",
-            _ => "[XX]"
-        };
-        Console.WriteLine($"  {symbol} {name}: {health.MetricsAvailable}/{health.MetricsExpected} metrics");
+            symbol = health.Status switch
+            {
+                ProviderStatus.Active => "\u2705",  // ✅
+                ProviderStatus.Unavailable => "\u26A0\uFE0F",  // ⚠
+                _ => "\u274C"  // ❌
+            };
+            suffix = health.Status switch
+            {
+                ProviderStatus.Active => $" (Tier 2 \u2014 admin)",
+                ProviderStatus.Unavailable => " \u2192 Accept UAC prompt for Tier 2",
+                ProviderStatus.Failed => " \u2192 Tier 2 sensors unavailable",
+                _ => ""
+            };
+        }
+        else
+        {
+            symbol = health.Status switch
+            {
+                ProviderStatus.Active => "[OK]",
+                ProviderStatus.Degraded => "[!!]",
+                _ => "[XX]"
+            };
+        }
+        Console.WriteLine($"  {symbol} {name}: {health.MetricsAvailable}/{health.MetricsExpected} metrics{suffix}");
         if (health.DegradationReason != null)
             Console.WriteLine($"       {health.DegradationReason}");
     }
+
+    // Show overall tier
+    Console.WriteLine($"  Tier: {session.HealthMatrix.OverallTier}");
 
     // Check if any providers are available
     var activeProviders = session.HealthMatrix.Providers.Values
@@ -356,6 +499,28 @@ try
         });
     }
 
+    // Collect ETW events in background
+    Task? etwCollectionTask = null;
+    if (etwProvider != null && etwProvider.Health.Status != ProviderStatus.Unavailable
+        && etwProvider.Health.Status != ProviderStatus.Failed)
+    {
+        etwCollectionTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in etwProvider.Events.WithCancellation(cts.Token))
+                {
+                    if (evt is EtwEvent etwEvt)
+                    {
+                        lock (etwEvents) { etwEvents.Add(etwEvt); }
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch { /* ETW collection failure doesn't crash capture */ }
+        });
+    }
+
     // Live display
     LiveDisplay? liveDisplay = null;
     if (!options.NoLive && !Console.IsInputRedirected)
@@ -395,9 +560,28 @@ try
         catch { /* timeout ok */ }
     }
 
+    // Wait for ETW collection to finish
+    if (etwCollectionTask != null)
+    {
+        try { await etwCollectionTask.WaitAsync(TimeSpan.FromSeconds(5)); }
+        catch { /* timeout ok */ }
+    }
+
     await session.FinishAsync();
 
-    Console.WriteLine($"Capture complete. {session.SampleCount} samples collected.");
+    // Quick summary box
+    Console.WriteLine();
+    Console.WriteLine($"  Capture complete. {session.SampleCount} samples collected.");
+    int frameCount;
+    lock (frameTimeSamples) { frameCount = frameTimeSamples.Count; }
+    if (frameCount > 0)
+        Console.WriteLine($"  Frames: {frameCount}");
+    int etwCount;
+    lock (etwEvents) { etwCount = etwEvents.Count; }
+    if (etwCount > 0)
+        Console.WriteLine($"  ETW events: {etwCount}");
+    Console.WriteLine();
+
     return 0;
 }
 catch (Exception ex)
@@ -418,3 +602,143 @@ static HardwareInventory CreateDefaultHardware() => new(
 
 static SystemConfiguration CreateDefaultConfig() => new(
     "Unknown", false, false, false, false, false, 0, 0, "Unknown", 0, "Unknown");
+
+static Dictionary<string, string> GetMetricDescriptions() => new()
+{
+    // CPU
+    ["avg_load"] = "How busy your CPU was on average (lower is better)",
+    ["p95_load"] = "How busy your CPU was during intense moments",
+    ["thermal_throttle"] = "Time your CPU was too hot and had to slow down",
+    ["single_core_saturation"] = "Time a single CPU core was maxed out (common in older games)",
+    ["dpc_time"] = "Time spent on driver overhead — high values mean a driver is hogging the CPU",
+    ["clock_drop"] = "How much your CPU slowed down from its top speed (overheating or power limits)",
+    // Memory
+    ["avg_utilization"] = "How full your RAM was on average — above 85% means you're running low",
+    ["page_fault_rate"] = "How often programs asked for memory that wasn't ready — very high = too many programs open",
+    ["hard_fault_rate"] = "How often Windows had to read from disk because RAM was full — causes stutters",
+    ["commit_ratio"] = "Total memory promised to programs vs. what's available — above 90% means you're near the limit",
+    ["low_available"] = "Time your system had almost no free RAM left",
+    // GPU
+    ["vram_utilization"] = "How full your graphics card's memory (VRAM) was",
+    ["vram_overflow"] = "Your game tried to use more VRAM than your GPU has — causes major stutters",
+    ["power_throttle"] = "Your GPU hit its power limit and had to slow down",
+    // Disk
+    ["avg_queue_length"] = "How backed up your disk was with read/write requests",
+    ["avg_latency"] = "How long your disk took to respond — higher means slower loading",
+    ["active_time"] = "How much of the time your disk was busy",
+    ["is_hdd"] = "You're using a hard drive instead of an SSD — HDDs are much slower for gaming",
+    // Network
+    ["retransmit_rate"] = "How often data had to be resent over your network — high means packet loss or bad connection",
+    ["bandwidth_ceiling"] = "Your internet connection is close to being maxed out",
+};
+
+static CategoryScore MapScore(SubsystemScore sub)
+{
+    var descriptions = GetMetricDescriptions();
+    var components = sub.ComponentDetails?.Select(c =>
+        new ScoreComponent(
+            c.Name,
+            c.RawValue,
+            Math.Round(c.NormalizedValue, 1),
+            c.Weight,
+            descriptions.GetValueOrDefault(c.Name, c.Name.Replace('_', ' '))
+        )).ToList();
+
+    return new CategoryScore(
+        sub.Score ?? 0,
+        sub.Classification,
+        sub.AvailableMetrics,
+        sub.TotalMetrics,
+        components,
+        sub.Missing.Count > 0 ? sub.Missing.ToList() : null
+    );
+}
+
+static List<MemoryProcessEntry> CaptureTopMemoryProcesses()
+{
+    try
+    {
+        long totalPhysicalBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+        double totalMb = totalPhysicalBytes / (1024.0 * 1024.0);
+
+        var knownDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["explorer"] = "Windows Shell — Desktop, Taskbar, File Explorer",
+            ["dwm"] = "Desktop Window Manager — composits all windows",
+            ["SearchIndexer"] = "Windows Search indexing service",
+            ["MsMpEng"] = "Windows Defender antimalware engine",
+            ["svchost"] = "Windows service host process",
+            ["csrss"] = "Windows Client/Server Runtime — core system process",
+            ["lsass"] = "Local Security Authority — authentication",
+            ["RuntimeBroker"] = "UWP app permission broker",
+            ["ShellExperienceHost"] = "Windows Shell Experience (Start Menu, Action Center)",
+            ["SecurityHealthService"] = "Windows Security service",
+            ["OneDrive"] = "Microsoft OneDrive sync client",
+            ["Teams"] = "Microsoft Teams",
+            ["chrome"] = "Google Chrome browser",
+            ["msedge"] = "Microsoft Edge browser",
+            ["firefox"] = "Mozilla Firefox browser",
+            ["discord"] = "Discord voice/chat client",
+            ["Spotify"] = "Spotify music player",
+            ["steam"] = "Steam game platform client",
+            ["steamwebhelper"] = "Steam embedded browser (Chromium)",
+            ["EpicGamesLauncher"] = "Epic Games Store launcher",
+            ["NahimicService"] = "Nahimic audio processing service",
+            ["Corsair.Service"] = "Corsair iCUE peripheral management",
+            ["iCUE"] = "Corsair iCUE RGB/peripheral software",
+            ["NZXT CAM"] = "NZXT CAM hardware monitoring",
+            ["RazerCentral"] = "Razer Synapse peripheral management",
+            ["Wallpaper32"] = "Wallpaper Engine (animated desktop)",
+            ["WallpaperService32"] = "Wallpaper Engine service",
+            ["obs64"] = "OBS Studio — streaming/recording",
+            ["Code"] = "Visual Studio Code",
+            ["devenv"] = "Visual Studio IDE",
+            ["WindowsTerminal"] = "Windows Terminal",
+            ["powershell"] = "PowerShell",
+        };
+
+        var processes = System.Diagnostics.Process.GetProcesses();
+        var grouped = new Dictionary<string, (long ws, long priv, string? desc)>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var proc in processes)
+        {
+            try
+            {
+                string name = proc.ProcessName;
+                long ws = proc.WorkingSet64;
+                long priv = proc.PrivateMemorySize64;
+
+                if (grouped.TryGetValue(name, out var existing))
+                {
+                    grouped[name] = (existing.ws + ws, existing.priv + priv, existing.desc);
+                }
+                else
+                {
+                    knownDescriptions.TryGetValue(name, out string? desc);
+                    grouped[name] = (ws, priv, desc);
+                }
+            }
+            catch { /* access denied for some system processes — skip */ }
+        }
+
+        foreach (var proc in processes)
+        {
+            try { proc.Dispose(); } catch { }
+        }
+
+        return grouped
+            .OrderByDescending(kv => kv.Value.ws)
+            .Take(20)
+            .Select(kv => new MemoryProcessEntry(
+                kv.Key,
+                kv.Value.ws,
+                kv.Value.priv,
+                Math.Round(kv.Value.ws / (double)totalPhysicalBytes * 100.0, 1),
+                kv.Value.desc))
+            .ToList();
+    }
+    catch
+    {
+        return [];
+    }
+}

@@ -15,6 +15,7 @@ public class CliOptions
     public string? Compare { get; set; }
     public bool Csv { get; set; }
     public bool Etl { get; set; }
+    public bool NoElevate { get; set; }
     public int? Duration { get; set; }
     public bool Version { get; set; }
     public bool Help { get; set; }
@@ -72,6 +73,9 @@ public static class CliParser
                 case "--etl":
                     options.Etl = true;
                     break;
+                case "--no-elevate":
+                    options.NoElevate = true;
+                    break;
                 case "--duration":
                     options.Duration = int.Parse(NextArg(args, ref i, "--duration"));
                     break;
@@ -115,7 +119,8 @@ public static class CliParser
               --interval <ms>      Poll interval in milliseconds
               --duration <sec>     Auto-stop after N seconds
               --compare <path>     Compare with a previous baseline JSON
-              --elevate            Re-launch with admin privileges
+              --elevate            Re-launch with admin privileges (default: auto)
+              --no-elevate         Skip admin elevation (Tier 1 only)
               --no-presentmon      Disable PresentMon integration
               --no-etw             Disable ETW sessions
               --no-live            Disable live console display

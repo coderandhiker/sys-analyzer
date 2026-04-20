@@ -1,0 +1,24 @@
+/* SysAnalyzer Report — Custom Overrides */
+.score-card .progress { height: 0.5rem; }
+.score-card .card-body { padding: 1rem; }
+.score-card .display-6 { font-weight: 700; }
+.recommendation-high { border-left: 4px solid var(--tblr-danger); }
+.recommendation-medium { border-left: 4px solid var(--tblr-warning); }
+.recommendation-low { border-left: 4px solid var(--tblr-info); }
+.culprit-name { font-family: var(--tblr-font-monospace); font-weight: 600; }
+.delta-better { color: var(--tblr-success); }
+.delta-worse { color: var(--tblr-danger); }
+.delta-same { color: var(--tblr-secondary); }
+.chart-container { min-height: 280px; }
+.section-hidden { display: none !important; }
+.health-active { color: var(--tblr-success); }
+.health-degraded { color: var(--tblr-warning); }
+.health-failed { color: var(--tblr-danger); }
+.tier-badge { font-size: 0.75rem; }
+.config-pass { color: var(--tblr-success); }
+.config-warn { color: var(--tblr-warning); }
+.config-fail { color: var(--tblr-danger); }
+@media print {
+  .page-header, .page-footer { break-inside: avoid; }
+  .chart-container { break-inside: avoid; }
+}

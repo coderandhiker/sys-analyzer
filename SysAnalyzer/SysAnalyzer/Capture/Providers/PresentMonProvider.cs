@@ -80,9 +80,17 @@ public sealed class PresentMonProvider : IEventStreamProvider
         var binaryPath = _launcher.GetBinaryPath();
         if (!_launcher.BinaryExists(binaryPath))
         {
-            Health = new ProviderHealth(ProviderStatus.Unavailable,
-                "PresentMon.exe not found", 0, 0, 0);
-            return Task.FromResult(Health);
+            // Attempt auto-download
+            if (_launcher.TryAcquireBinary(binaryPath))
+            {
+                Console.WriteLine($"  PresentMon: downloaded to {binaryPath}");
+            }
+            else
+            {
+                Health = new ProviderHealth(ProviderStatus.Unavailable,
+                    "PresentMon.exe not found and auto-download failed", 0, 0, 0);
+                return Task.FromResult(Health);
+            }
         }
 
         Health = new ProviderHealth(ProviderStatus.Active, null, 1, 1, 0);
@@ -424,6 +432,7 @@ public interface IPresentMonProcessLauncher
 {
     string GetBinaryPath();
     bool BinaryExists(string path);
+    bool TryAcquireBinary(string path);
     Process? Start(string path, string arguments);
 }
 
@@ -432,6 +441,10 @@ public interface IPresentMonProcessLauncher
 /// </summary>
 public sealed class SystemProcessLauncher : IPresentMonProcessLauncher
 {
+    // PresentMon 1.10.0 console app — MIT licensed, 379 KB
+    private const string DownloadUrl =
+        "https://github.com/GameTechDev/PresentMon/releases/download/v1.10.0/PresentMon-1.10.0-x64.exe";
+
     public string GetBinaryPath()
     {
         var dir = Path.GetDirectoryName(Environment.ProcessPath)
@@ -440,6 +453,33 @@ public sealed class SystemProcessLauncher : IPresentMonProcessLauncher
     }
 
     public bool BinaryExists(string path) => File.Exists(path);
+
+    public bool TryAcquireBinary(string path)
+    {
+        try
+        {
+            Console.Write("  Downloading PresentMon 1.10.0...");
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            using var response = httpClient.GetAsync(DownloadUrl).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+
+            var tempPath = path + ".tmp";
+            using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                response.Content.CopyTo(fs, null, default);
+            }
+
+            File.Move(tempPath, path, overwrite: true);
+            Console.WriteLine(" done.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($" failed: {ex.Message}");
+            return false;
+        }
+    }
 
     public Process? Start(string path, string arguments)
     {

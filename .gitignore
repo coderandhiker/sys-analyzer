@@ -60,3 +60,9 @@ Desktop.ini
 
 # Tabler (vendored)
 tabler/
+
+# Test results - machine specific from runs
+test-captures/
+
+# Report output
+SysAnalyzer/reports/

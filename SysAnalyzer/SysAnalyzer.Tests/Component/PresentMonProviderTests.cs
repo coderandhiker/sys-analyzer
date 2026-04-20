@@ -25,6 +25,7 @@ public sealed class FakePresentMonLauncher : IPresentMonProcessLauncher
 
     public string GetBinaryPath() => "FakePresentMon.exe";
     public bool BinaryExists(string path) => _binaryExists;
+    public bool TryAcquireBinary(string path) => false;
 
     public Process? Start(string path, string arguments)
     {

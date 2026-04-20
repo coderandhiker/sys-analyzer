@@ -42,6 +42,12 @@ public sealed class EtwProvider : IEventStreamProvider
     public bool HasDiskAttribution => _hasDiskEvents;
     public bool HasProcessAttribution => _hasProcessEvents;
 
+    /// <summary>
+    /// When set before InitAsync, the ETW session will also write raw events to this ETL file.
+    /// The file can be opened in Windows Performance Analyzer for deeper analysis.
+    /// </summary>
+    public string? EtlFilePath { get; set; }
+
     public EtwProvider()
     {
         _channel = Channel.CreateBounded<EtwEvent>(new BoundedChannelOptions(ChannelCapacity)
@@ -66,7 +72,7 @@ public sealed class EtwProvider : IEventStreamProvider
         _sessionName = $"SysAnalyzer-{Environment.ProcessId}";
         try
         {
-            _session = CreateSession(_sessionName);
+            _session = CreateSession(_sessionName, EtlFilePath);
         }
         catch
         {
@@ -74,7 +80,7 @@ public sealed class EtwProvider : IEventStreamProvider
             try
             {
                 _sessionName = $"SysAnalyzer-{Environment.ProcessId}-{Random.Shared.Next(1000, 9999)}";
-                _session = CreateSession(_sessionName);
+                _session = CreateSession(_sessionName, EtlFilePath);
             }
             catch (Exception retryEx)
             {
@@ -286,8 +292,18 @@ public sealed class EtwProvider : IEventStreamProvider
         }
     }
 
-    private static TraceEventSession CreateSession(string sessionName)
+    private static TraceEventSession CreateSession(string sessionName, string? etlFilePath = null)
     {
+        if (etlFilePath != null)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(etlFilePath) ?? ".");
+            return new TraceEventSession(sessionName, etlFilePath)
+            {
+                BufferSizeMB = 64,
+                CpuSampleIntervalMSec = 0 // disable CPU sampling
+            };
+        }
+
         return new TraceEventSession(sessionName)
         {
             BufferSizeMB = 64,

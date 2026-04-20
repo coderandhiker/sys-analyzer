@@ -11,7 +11,7 @@ public sealed class ConfigValidator
         { "info", "warning", "critical" };
 
     private static readonly HashSet<string> ValidCategories = new(StringComparer.OrdinalIgnoreCase)
-        { "cpu", "memory", "gpu", "disk", "network", "software", "config", "frametime" };
+        { "cpu", "memory", "gpu", "disk", "network", "software", "config", "frametime", "thermal", "power" };
 
     private static readonly HashSet<string> ValidConfidences = new(StringComparer.OrdinalIgnoreCase)
         { "high", "medium", "low", "auto" };
@@ -20,7 +20,7 @@ public sealed class ConfigValidator
     private static readonly HashSet<string> KnownFieldPrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "cpu", "memory", "gpu", "disk", "network", "frametime", "system",
-        "culprit", "thresholds", "motherboard"
+        "culprit", "thresholds", "motherboard", "tier2"
     };
 
     public ConfigValidationResult Validate(AnalyzerConfig config)
@@ -70,7 +70,7 @@ public sealed class ConfigValidator
             // Category
             if (!ValidCategories.Contains(rec.Category))
                 errors.Add(new ConfigValidationError(prefix,
-                    $"invalid category '{rec.Category}'. Must be: cpu, memory, gpu, disk, network, software, config, frametime"));
+                    $"invalid category '{rec.Category}'. Must be: cpu, memory, gpu, disk, network, software, config, frametime, thermal, power"));
 
             // Confidence
             if (!ValidConfidences.Contains(rec.Confidence))

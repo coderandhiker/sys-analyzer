@@ -100,6 +100,7 @@ public static class BottleneckScorer
         int available = 0;
         int total = components.Count;
         var missing = new List<string>();
+        var details = new List<ScoreComponentDetail>();
 
         foreach (var (name, value, weight) in components)
         {
@@ -109,6 +110,7 @@ public static class BottleneckScorer
             {
                 if (weight > 0)
                     missing.Add(name);
+                details.Add(new ScoreComponentDetail(name, null, 0, weight));
                 continue;
             }
 
@@ -116,10 +118,11 @@ public static class BottleneckScorer
             double normalized = Normalize(value.Value, name, thresholds);
             availableWeightedSum += normalized * weight;
             availableWeightSum += weight;
+            details.Add(new ScoreComponentDetail(name, value.Value, normalized, weight));
         }
 
         if (availableWeightSum == 0)
-            return new SubsystemScore(null, "Unknown", available, total, missing);
+            return new SubsystemScore(null, "Unknown", available, total, missing, details);
 
         // Renormalization: scale up proportionally for missing metrics
         double rawScore = availableWeightedSum / availableWeightSum;
@@ -133,7 +136,7 @@ public static class BottleneckScorer
             _ => "Bottleneck"
         };
 
-        return new SubsystemScore(score, classification, available, total, missing);
+        return new SubsystemScore(score, classification, available, total, missing, details);
     }
 
     /// <summary>
@@ -228,7 +231,9 @@ public static class BottleneckScorer
     };
 }
 
-public record SubsystemScore(int? Score, string Classification, int AvailableMetrics, int TotalMetrics, IReadOnlyList<string> Missing);
+public record SubsystemScore(int? Score, string Classification, int AvailableMetrics, int TotalMetrics, IReadOnlyList<string> Missing, IReadOnlyList<ScoreComponentDetail>? ComponentDetails = null);
+
+public record ScoreComponentDetail(string Name, double? RawValue, double NormalizedValue, double Weight);
 
 public record ScoringResult(
     SubsystemScore Cpu,

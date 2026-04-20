@@ -58,8 +58,8 @@ public class PerfCounterProviderTests
     public async Task Init_SomeCountersMissing_Degraded()
     {
         var factory = new FakePerfCounterFactory();
-        factory.SetMissing("GPU Engine", "Utilization Percentage");
-        factory.SetMissing("GPU Process Memory", "Dedicated Usage");
+        factory.SetMissing("Network Interface", "Bytes Total/sec");
+        factory.SetMissing("TCPv4", "Segments Retransmitted/sec");
 
         var provider = new PerformanceCounterProvider(factory);
         var health = await provider.InitAsync();
@@ -67,7 +67,7 @@ public class PerfCounterProviderTests
         Assert.Equal(ProviderStatus.Degraded, health.Status);
         Assert.True(health.MetricsAvailable < health.MetricsExpected);
         Assert.NotNull(health.DegradationReason);
-        Assert.Contains("GPU", health.DegradationReason!);
+        Assert.Contains("Network", health.DegradationReason!);
     }
 
     [Fact]
@@ -111,17 +111,16 @@ public class PerfCounterProviderTests
     }
 
     [Fact]
-    public async Task Poll_MissingGpuCounters_NaN()
+    public async Task Poll_MissingNetworkCounters_ZeroValues()
     {
         var factory = new FakePerfCounterFactory();
-        factory.SetMissing("GPU Engine", "Utilization Percentage");
-        factory.SetMissing("GPU Process Memory", "Dedicated Usage");
+        factory.SetMissing("Network Interface", "Bytes Total/sec");
 
         var provider = new PerformanceCounterProvider(factory);
         await provider.InitAsync();
 
         var batch = provider.Poll(0);
-        Assert.True(double.IsNaN(batch.GpuUtilizationPercent));
+        Assert.Equal(0, batch.NetworkBytesPerSec);
     }
 
     [Fact]

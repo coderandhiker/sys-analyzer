@@ -17,7 +17,8 @@ public record AnalysisSummary(
     IReadOnlyList<RecommendationEntry> Recommendations,
     BaselineComparisonSummary? BaselineComparison,
     SelfOverhead SelfOverhead,
-    TimeSeriesMetadata TimeSeries
+    TimeSeriesMetadata TimeSeries,
+    IReadOnlyList<MemoryProcessEntry>? TopMemoryProcesses = null
 );
 
 public record AnalysisMetadata(
@@ -99,7 +100,17 @@ public record CategoryScore(
     int Score,
     string Classification,
     int AvailableMetrics,
-    int TotalMetrics
+    int TotalMetrics,
+    IReadOnlyList<ScoreComponent>? Components = null,
+    IReadOnlyList<string>? MissingMetrics = null
+);
+
+public record ScoreComponent(
+    string Name,
+    double? Value,
+    double NormalizedValue,
+    double Weight,
+    string Description
 );
 
 public record FrameTimeSummary(
@@ -134,6 +145,14 @@ public record ProcessEntry(string Name, double ContextSwitchPct, string? Descrip
 public record DpcDriverEntry(string Module, double DpcTimePct, string? Description = null);
 public record DiskProcessEntry(string Name, double DiskIoPct, string? Description = null, string? Remediation = null, double CorrelationWithStutter = 0);
 public record ProcessLifetimeInfo(string Name, int ProcessId, bool IsStart, double TimestampSeconds, bool CorrelatesWithStutterCluster = false);
+
+public record MemoryProcessEntry(
+    string Name,
+    long WorkingSetBytes,
+    long PrivateBytes,
+    double MemoryPercent,
+    string? Description
+);
 
 public record RecommendationEntry(
     string Id,

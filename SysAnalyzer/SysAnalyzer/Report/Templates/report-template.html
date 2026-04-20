@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SysAnalyzer Report</title>
+  <style>
+    /* TABLER_CSS_PLACEHOLDER */
+  </style>
+  <style>
+    /* REPORT_CSS_PLACEHOLDER */
+  </style>
+</head>
+<body class="theme-light">
+  <script>
+    /* TABLER_THEME_JS_PLACEHOLDER */
+  </script>
+  <div class="page">
+    <!-- Header -->
+    <div class="page-header d-print-none">
+      <div class="container-xl">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <h2 class="page-title">SysAnalyzer Report</h2>
+            <div class="text-secondary mt-1" id="report-subtitle"></div>
+          </div>
+          <div class="col-auto ms-auto">
+            <span class="badge" id="tier-badge"></span>
+            <span class="badge bg-azure ms-1" id="profile-badge"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="container-xl">
+
+        <!-- Metadata Row -->
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body py-2">
+                <div class="row text-center" id="metadata-row">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensor Health Matrix -->
+        <div class="row mb-3" id="sensor-health-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Sensor Health</h3></div>
+              <div class="card-body py-2">
+                <div class="row" id="sensor-health-row"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Score Cards -->
+        <div class="row mb-3" id="score-cards-row"></div>
+
+        <!-- Frame Timing Summary -->
+        <div class="row mb-3" id="frame-timing-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Frame Timing</h3></div>
+              <div class="card-body">
+                <div class="row" id="frame-timing-metrics"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Recommendations -->
+        <div class="row mb-3" id="recommendations-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Recommendations</h3></div>
+              <div class="card-body" id="recommendations-body"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Culprit Attribution -->
+        <div class="row mb-3" id="culprit-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Culprit Attribution</h3></div>
+              <div class="card-body" id="culprit-body"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time-Series Charts -->
+        <div class="row mb-3" id="charts-section">
+          <div class="col-lg-6 mb-3" id="chart-cpu-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">CPU Utilization</h3></div>
+              <div class="card-body chart-container"><div id="chart-cpu"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-memory-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Memory Utilization</h3></div>
+              <div class="card-body chart-container"><div id="chart-memory"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-gpu-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">GPU Load &amp; VRAM</h3></div>
+              <div class="card-body chart-container"><div id="chart-gpu"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-disk-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Disk Activity</h3></div>
+              <div class="card-body chart-container"><div id="chart-disk"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-network-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Network Throughput</h3></div>
+              <div class="card-body chart-container"><div id="chart-network"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-frametime-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Frame Time</h3></div>
+              <div class="card-body chart-container"><div id="chart-frametime"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-fps-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">FPS Over Time</h3></div>
+              <div class="card-body chart-container"><div id="chart-fps"></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 mb-3" id="chart-histogram-container">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Frame Time Distribution</h3></div>
+              <div class="card-body chart-container"><div id="chart-histogram"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Baseline Comparison -->
+        <div class="row mb-3" id="baseline-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Baseline Comparison</h3></div>
+              <div class="card-body">
+                <table class="table table-vcenter" id="baseline-table">
+                  <thead><tr><th>Metric</th><th>Baseline</th><th>Current</th><th>Change</th><th>Verdict</th></tr></thead>
+                  <tbody id="baseline-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hardware Inventory -->
+        <div class="row mb-3" id="hardware-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Hardware Inventory</h3></div>
+              <div class="card-body">
+                <div class="row" id="hardware-body"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Configuration Audit -->
+        <div class="row mb-3" id="sysconfig-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">System Configuration</h3></div>
+              <div class="card-body">
+                <div class="list-group" id="sysconfig-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Statistics (Accordion) -->
+        <div class="row mb-3" id="raw-stats-section">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Detailed Statistics</h3></div>
+              <div class="card-body">
+                <div class="accordion" id="stats-accordion"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Self Overhead -->
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Capture Overhead</h3></div>
+              <div class="card-body py-2">
+                <div class="row text-center" id="overhead-row"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer footer-transparent d-print-none">
+      <div class="container-xl">
+        <div class="row text-center">
+          <div class="col-12">
+            <span class="text-secondary" id="footer-text"></span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /* APEXCHARTS_JS_PLACEHOLDER */
+  </script>
+  <script>
+    /* TABLER_JS_PLACEHOLDER */
+  </script>
+  <script>
+    window.reportData = /*REPORT_DATA_PLACEHOLDER*/{};
+  </script>
+  <script>
+    (function() {
+      var d = window.reportData;
+      if (!d || !d.metadata) return;
+
+      // --- Helpers ---
+      function el(id) { return document.getElementById(id); }
+      function hide(id) { var e = el(id); if (e) e.classList.add('section-hidden'); }
+      function show(id) { var e = el(id); if (e) e.classList.remove('section-hidden'); }
+
+      function scoreColor(score) {
+        if (score <= 25) return 'success';
+        if (score <= 50) return 'warning';
+        if (score <= 75) return 'orange';
+        return 'danger';
+      }
+
+      function severityColor(sev) {
+        if (sev === 'critical') return 'danger';
+        if (sev === 'warning') return 'warning';
+        return 'info';
+      }
+
+      function confidenceBadge(conf) {
+        var colors = { high: 'success', medium: 'warning', low: 'secondary' };
+        return '<span class="badge bg-' + (colors[conf] || 'secondary') + ' ms-1">' + conf + '</span>';
+      }
+
+      function deltaArrow(change) {
+        if (Math.abs(change) < 0.5) return '<span class="delta-same">&mdash;</span>';
+        if (change < 0) return '<span class="delta-better">&darr; ' + change.toFixed(1) + '</span>';
+        return '<span class="delta-worse">&uarr; +' + change.toFixed(1) + '</span>';
+      }
+
+      function deltaVerdict(change) {
+        if (Math.abs(change) < 0.5) return '<span class="badge bg-secondary">Same</span>';
+        if (change < 0) return '<span class="badge bg-success">Better</span>';
+        return '<span class="badge bg-danger">Worse</span>';
+      }
+
+      function formatDuration(seconds) {
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        var s = Math.floor(seconds % 60);
+        if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+        if (m > 0) return m + 'm ' + s + 's';
+        return s + 's';
+      }
+
+      function formatBytes(bytes) {
+        if (bytes > 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+        if (bytes > 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+        return (bytes / 1024).toFixed(0) + ' KB';
+      }
+
+      function formatTimestamp(ts) {
+        try { return new Date(ts).toLocaleString(); } catch(e) { return ts; }
+      }
+
+      function formatSeconds(sec) {
+        var m = Math.floor(sec / 60);
+        var s = (sec % 60).toFixed(1);
+        return m > 0 ? m + ':' + (s < 10 ? '0' : '') + s : s + 's';
+      }
+
+      // --- Metadata ---
+      el('report-subtitle').textContent =
+        formatTimestamp(d.metadata.timestamp) + ' \u2022 ' +
+        formatDuration(d.metadata.durationSeconds) + ' \u2022 ' +
+        (d.metadata.label || 'Unlabeled');
+
+      var tierColor = d.metadata.tier === 'Tier2' ? 'bg-green' : 'bg-yellow';
+      el('tier-badge').className = 'badge ' + tierColor;
+      el('tier-badge').textContent = d.metadata.tier;
+      el('profile-badge').textContent = d.metadata.profile;
+
+      el('metadata-row').innerHTML =
+        '<div class="col"><div class="text-secondary">Duration</div><strong>' + formatDuration(d.metadata.durationSeconds) + '</strong></div>' +
+        '<div class="col"><div class="text-secondary">Profile</div><strong>' + d.metadata.profile + '</strong></div>' +
+        '<div class="col"><div class="text-secondary">Tier</div><strong>' + d.metadata.tier + '</strong></div>' +
+        '<div class="col"><div class="text-secondary">Capture ID</div><strong>' + d.metadata.captureId + '</strong></div>' +
+        '<div class="col"><div class="text-secondary">Samples</div><strong>' + (d.timeSeries ? d.timeSeries.sampleCount : 'N/A') + '</strong></div>';
+
+      // --- Sensor Health ---
+      if (d.sensorHealth && d.sensorHealth.providers) {
+        var healthHtml = '';
+        d.sensorHealth.providers.forEach(function(p) {
+          var color = p.status === 'Active' ? 'success' : p.status === 'Degraded' ? 'warning' : 'danger';
+          var icon = p.status === 'Active' ? '\u2705' : p.status === 'Degraded' ? '\u26A0\uFE0F' : '\u274C';
+          healthHtml += '<div class="col-md-3 mb-2">' +
+            '<div class="d-flex align-items-center">' +
+            '<span class="me-2">' + icon + '</span>' +
+            '<div><strong>' + p.name + '</strong>' +
+            '<div class="text-secondary small">' + p.metricsAvailable + '/' + p.metricsExpected + ' metrics' +
+            (p.eventsLost > 0 ? ' \u2022 ' + p.eventsLost + ' events lost' : '') +
+            '</div>' +
+            (p.degradationReason ? '<div class="text-secondary small">' + p.degradationReason + '</div>' : '') +
+            '</div></div></div>';
+        });
+        el('sensor-health-row').innerHTML = healthHtml;
+      }
+
+      // --- Score Cards ---
+      var scoreExplanations = {
+        'Healthy': 'This subsystem is operating well within normal parameters. No action needed.',
+        'Moderate': 'This subsystem shows some load. Worth monitoring but unlikely to cause issues.',
+        'Stressed': 'This subsystem is under significant load and may be impacting performance.',
+        'Bottleneck': 'This subsystem is a performance bottleneck. Action recommended to improve performance.'
+      };
+
+      // Plain-English per-category explanations keyed by classification
+      var categoryAdvice = {
+        CPU: {
+          Healthy: "Your CPU has plenty of headroom. It's not limiting your game.",
+          Moderate: "Your CPU is working but has room to spare. You may notice slowdowns in very CPU-heavy scenes.",
+          Stressed: "Your CPU is working hard. You might see frame drops in complex scenes. Try closing background apps or lowering settings like draw distance, NPC counts, or physics quality.",
+          Bottleneck: "Your CPU can't keep up. This is likely causing stutters or low FPS. Close background apps, lower CPU-heavy settings (draw distance, NPC density, simulation quality), or consider upgrading."
+        },
+        Memory: {
+          Healthy: "Your system has plenty of free RAM. Memory isn't an issue.",
+          Moderate: "RAM usage is moderate. You're fine for now, but closing a few apps would give more breathing room.",
+          Stressed: "__MEMORY_DYNAMIC__",
+          Bottleneck: "__MEMORY_DYNAMIC__"
+        },
+        GPU: {
+          Healthy: "Your GPU is barely breaking a sweat. Graphics settings aren't an issue.",
+          Moderate: "Your GPU is doing some work. You could turn settings up a bit, or it may dip under heavy load.",
+          Stressed: "Your GPU is under heavy load. Lower graphical settings (resolution, shadows, ray tracing, anti-aliasing) if you want more consistent frame rates.",
+          Bottleneck: "Your GPU is maxed out. This is the main limit on your frame rate. Turn down resolution, shadow quality, ray tracing, or DLSS/FSR mode. If you're already on low, your GPU may not be powerful enough for this game."
+        },
+        Disk: {
+          Healthy: "Disk I/O is minimal. Storage isn't causing any issues.",
+          Moderate: "Some disk activity detected. Probably fine, but a faster SSD would help if you see long load times.",
+          Stressed: "Disk is under pressure. You may see long load times or texture pop-in. An NVMe SSD upgrade or closing disk-heavy background apps (file sync, antivirus scans) would help.",
+          Bottleneck: "Disk I/O is a bottleneck. This causes texture streaming hitches, long loads, and micro-stutters. Check if antivirus or cloud sync is thrashing your drive. Move the game to an NVMe SSD if possible."
+        },
+        Network: {
+          Healthy: "Network is fine. No issues detected.",
+          Moderate: "Some network activity. Unlikely to affect your game unless it's an online title.",
+          Stressed: "Heavy network usage. If playing online, this may cause lag. Pause downloads, streaming, or other devices hogging bandwidth.",
+          Bottleneck: "Network is saturated. Online games will lag badly. Pause all downloads, close streaming apps, and check if other devices are flooding your connection."
+        }
+      };
+
+      // Human-friendly metric descriptions (replace the internal names)
+      var friendlyMetricNames = {
+        'avg_utilization': 'RAM Usage',
+        'max_utilization': 'Peak Usage',
+        'queue_length': 'Queue Depth',
+        'page_fault_rate': 'Page Faults',
+        'hard_fault_rate': 'Hard Faults (disk reads)',
+        'commit_ratio': 'Memory Commit %',
+        'low_available': 'Time Low on RAM',
+        'context_switch_rate': 'Context Switches',
+        'avg_clock_mhz': 'Clock Speed',
+        'interrupt_rate': 'Interrupts',
+        'gpu_utilization': 'GPU Usage',
+        'gpu_memory_utilization': 'VRAM Usage',
+        'gpu_temperature': 'GPU Temp',
+        'disk_read_rate': 'Disk Reads',
+        'disk_write_rate': 'Disk Writes',
+        'disk_queue': 'Disk Queue',
+        'bytes_sent_rate': 'Upload',
+        'bytes_received_rate': 'Download',
+        'connection_failures': 'Connection Errors',
+        'avg_load': 'CPU Usage',
+        'p95_load': 'CPU Peak Usage',
+        'thermal_throttle': 'CPU Overheating',
+        'single_core_saturation': 'Single Core Maxed',
+        'dpc_time': 'Driver Overhead',
+        'clock_drop': 'CPU Throttling',
+        'vram_utilization': 'VRAM Usage',
+        'vram_overflow': 'VRAM Overflow',
+        'power_throttle': 'GPU Power Limit',
+        'avg_queue_length': 'Disk Backlog',
+        'avg_latency': 'Disk Response Time',
+        'active_time': 'Disk Busy %',
+        'is_hdd': 'Hard Drive Penalty',
+        'retransmit_rate': 'Packet Loss',
+        'bandwidth_ceiling': 'Bandwidth Maxed'
+      };
+
+      function formatBytes(bytes) {
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + ' MB';
+        return (bytes / 1024).toFixed(0) + ' KB';
+      }
+
+      // Check if game performance is actually fine based on frame timing
+      function gameImpactNote(name, score) {
+        if (!d.frameTime || d.frameTime.available === false) return '';
+        var ft = d.frameTime;
+        var fpsOk = ft.avgFps >= 30;
+        var stutterLow = (ft.stutterCount || 0) < 50;
+        if (score.score >= 60 && fpsOk && stutterLow) {
+          return '<div class="alert alert-info py-2 mt-3 mb-0">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler me-1" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2 2"/></svg>' +
+            '<strong>Your game is still running OK.</strong> ' + (ft.avgFps || 0).toFixed(0) + ' avg FPS with ' +
+            (ft.stutterCount || 0) + ' stutters. This score reflects system-level pressure — your game isn\'t severely impacted <em>yet</em>, but it could worsen if load increases.</div>';
+        }
+        if (score.score >= 60 && (!fpsOk || !stutterLow)) {
+          return '<div class="alert alert-danger py-2 mt-3 mb-0">' +
+            '<strong>This is likely affecting your game.</strong> ' +
+            (!fpsOk ? 'Average FPS is only ' + (ft.avgFps || 0).toFixed(0) + '. ' : '') +
+            (!stutterLow ? (ft.stutterCount || 0) + ' stutters detected. ' : '') +
+            'The recommendations below should help.</div>';
+        }
+        return '';
+      }
+
+      function renderScoreCard(name, score, baseline) {
+        if (!score) return '';
+        var color = scoreColor(score.score);
+        var modalId = 'scoreModal' + name;
+        var deltaHtml = '';
+        if (baseline && baseline.deltas) {
+          var delta = baseline.deltas.find(function(d) { return d.metric.indexOf(name.toLowerCase()) === 0; });
+          if (delta) {
+            deltaHtml = '<div class="mt-1">' + deltaArrow(delta.change) + '</div>';
+          }
+        }
+
+        // One-liner subtitle for the card itself
+        var subtitles = { Healthy: 'Looking good', Moderate: 'Worth watching', Stressed: 'Needs attention', Bottleneck: 'Take action' };
+        var subtitle = subtitles[score.classification] || '';
+
+        // Plain-English advice for the modal
+        var advice = (categoryAdvice[name] && categoryAdvice[name][score.classification]) || scoreExplanations[score.classification] || '';
+
+        // Memory: replace placeholder with context-aware advice based on hard faults
+        if (name === 'Memory' && advice === '__MEMORY_DYNAMIC__') {
+          var hardFaultComp = score.components && score.components.find(function(c) { return c.name === 'hard_fault_rate'; });
+          var hardFaultsLow = !hardFaultComp || hardFaultComp.value === null || hardFaultComp.value < 50;
+          if (hardFaultsLow) {
+            advice = 'Your RAM usage looks high, but don\'t panic. Windows intentionally fills RAM with cached data to speed things up — this is normal and actually helps performance. ' +
+              'The key indicator is "Hard Faults" (below) — when that number is low, Windows is NOT struggling to find memory. ' +
+              'Your hard fault rate is ' + (hardFaultComp && hardFaultComp.value != null ? hardFaultComp.value.toFixed(1) + '/sec' : 'negligible') +
+              ', which means your system is handling memory fine right now.';
+          } else {
+            advice = 'Your system is genuinely running low on usable RAM. Windows is reading data back from disk (' +
+              (hardFaultComp.value || 0).toFixed(0) + ' hard faults/sec), which causes stutters and slow loading. ' +
+              'Check the list below to see what\'s using your RAM — closing programs you don\'t need will help immediately.';
+          }
+        }
+
+        var impactHtml = gameImpactNote(name, score);
+
+        // Build modal content
+        var modalHtml = '';
+        if (score.components && score.components.length > 0) {
+          modalHtml = '<div class="modal modal-blur fade" id="' + modalId + '" tabindex="-1">' +
+            '<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header">' +
+            '<h5 class="modal-title">' + name + ' — What\'s Going On</h5>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>' +
+            '<div class="modal-body">' +
+            // Big score + plain English explanation
+            '<div class="alert alert-' + color + ' mb-3">' +
+            '<div class="d-flex align-items-center"><div class="display-6 me-3 text-' + color + '">' + score.score + '</div>' +
+            '<div><strong>' + score.classification + '</strong><br>' +
+            '<span>' + advice + '</span></div></div></div>' +
+            impactHtml;
+
+          // Memory consumers inside Memory modal
+          if (name === 'Memory' && d.topMemoryProcesses && d.topMemoryProcesses.length > 0) {
+            var topProcs = d.topMemoryProcesses.slice(0, 15);
+            // Determine game process name to exclude from "Can close"
+            var gameProc = (d.frameTime && d.frameTime.trackedApplication) ? d.frameTime.trackedApplication.toLowerCase().replace('.exe', '') : '';
+            var systemProcs = ['system', 'registry', 'memory compression', 'csrss', 'lsass', 'smss', 'wininit', 'services', 'dwm', 'svchost', 'winlogon', 'fontdrvhost', 'conhost', 'wudfhost', 'audiodg', 'spoolsv'];
+            modalHtml += '<div class="card bg-light mb-3"><div class="card-body py-2">' +
+              '<h4 class="mb-2">What\'s using your RAM</h4>' +
+              '<table class="table table-sm table-vcenter mb-0"><thead><tr><th>Program</th><th class="text-end">Memory</th><th class="text-end">% of RAM</th><th></th></tr></thead><tbody>';
+            topProcs.forEach(function(p) {
+              var pLower = p.name.toLowerCase();
+              var isGame = gameProc && pLower.indexOf(gameProc) >= 0;
+              var isSystem = systemProcs.indexOf(pLower) >= 0;
+              var badge = isGame ? '<span class="badge bg-azure-lt">Your game</span>' :
+                isSystem ? '<span class="badge bg-secondary-lt">System</span>' :
+                p.memoryPercent >= 0.5 ? '<span class="badge bg-yellow-lt">Can close</span>' : '';
+              modalHtml += '<tr><td><strong>' + p.name + '</strong>' +
+                (p.description ? '<br><span class="text-secondary small">' + p.description + '</span>' : '') + '</td>' +
+                '<td class="text-end">' + formatBytes(p.workingSetBytes) + '</td>' +
+                '<td class="text-end">' + p.memoryPercent.toFixed(1) + '%</td>' +
+                '<td>' + badge + '</td></tr>';
+            });
+            modalHtml += '</tbody></table></div></div>';
+          }
+
+          // Detail table — with friendly metric names
+          modalHtml += '<details class="mb-2"><summary class="text-secondary" style="cursor:pointer">Technical details (' + score.components.length + ' metrics)</summary>' +
+            '<table class="table table-vcenter table-sm mt-2">' +
+            '<thead><tr><th>Metric</th><th>What it measures</th><th class="text-end">Value</th><th class="text-end">Severity</th><th class="text-end">Weight</th></tr></thead><tbody>';
+          score.components.forEach(function(c) {
+            var rowClass = c.value === null ? 'text-muted' : (c.normalizedValue >= 75 ? 'table-danger' : c.normalizedValue >= 50 ? 'table-warning' : '');
+            var rawVal = c.value !== null && c.value !== undefined ? c.value.toFixed(1) : '<em>N/A</em>';
+            var friendly = friendlyMetricNames[c.name] || c.name;
+            var severityLabel = c.value === null ? '\u2014' : (c.normalizedValue >= 75 ? '<span class="badge bg-red-lt">High</span>' :
+              c.normalizedValue >= 50 ? '<span class="badge bg-yellow-lt">Medium</span>' :
+              c.normalizedValue >= 25 ? '<span class="badge bg-cyan-lt">Low</span>' : '<span class="badge bg-green-lt">OK</span>');
+            var wt = c.weight > 0 ? (c.weight * 100).toFixed(0) + '%' : '\u2014';
+            modalHtml += '<tr class="' + rowClass + '"><td><strong>' + friendly + '</strong></td>' +
+              '<td class="text-secondary small">' + (c.description || '') + '</td>' +
+              '<td class="text-end">' + rawVal + '</td>' +
+              '<td class="text-end">' + severityLabel + '</td>' +
+              '<td class="text-end">' + wt + '</td></tr>';
+          });
+          modalHtml += '</tbody></table></details>';
+          if (score.missingMetrics && score.missingMetrics.length > 0) {
+            modalHtml += '<div class="alert alert-warning py-2 mt-2">\u26A0\uFE0F <strong>Missing data:</strong> ' + score.missingMetrics.join(', ') +
+              '<br><span class="text-secondary small">Score is estimated from available data. Run with admin privileges for the most accurate results.</span></div>';
+          }
+          modalHtml += '</div><div class="modal-footer"><button type="button" class="btn" data-bs-dismiss="modal">Close</button></div>' +
+            '</div></div></div>';
+        }
+
+        return '<div class="col-lg col-md-4 col-sm-6 mb-3"><div class="card score-card">' +
+          '<div class="card-body text-center">' +
+          '<div class="text-secondary mb-1">' + name + '</div>' +
+          '<div class="display-6 text-' + color + '">' + score.score + '</div>' +
+          '<div class="text-' + color + ' small fw-bold">' + subtitle + '</div>' +
+          '<div class="progress mt-2"><div class="progress-bar bg-' + color + '" style="width:' + score.score + '%"></div></div>' +
+          '<a href="#" class="text-secondary small mt-1 d-block" data-bs-toggle="modal" data-bs-target="#' + modalId + '" style="cursor:pointer">' +
+            'What does this mean? \u25B6</a>' +
+          deltaHtml +
+          '</div></div>' + modalHtml + '</div>';
+      }
+
+      var scoresHtml = '';
+      if (d.scores) {
+        scoresHtml += renderScoreCard('CPU', d.scores.cpu, d.baselineComparison);
+        scoresHtml += renderScoreCard('Memory', d.scores.memory, d.baselineComparison);
+        if (d.scores.gpu) scoresHtml += renderScoreCard('GPU', d.scores.gpu, d.baselineComparison);
+        scoresHtml += renderScoreCard('Disk', d.scores.disk, d.baselineComparison);
+        scoresHtml += renderScoreCard('Network', d.scores.network, d.baselineComparison);
+      }
+      el('score-cards-row').innerHTML = scoresHtml;
+
+      // --- Frame Timing ---
+      if (d.frameTime && d.frameTime.available !== false) {
+        var ft = d.frameTime;
+        el('frame-timing-metrics').innerHTML =
+          '<div class="col-md-2 text-center mb-2"><div class="text-secondary">Avg FPS</div><strong class="display-6">' + (ft.avgFps || 0).toFixed(1) + '</strong></div>' +
+          '<div class="col-md-2 text-center mb-2"><div class="text-secondary">P1 FPS</div><strong>' + (ft.p1Fps || 0).toFixed(1) + '</strong></div>' +
+          '<div class="col-md-2 text-center mb-2"><div class="text-secondary">P95 Frame</div><strong>' + (ft.p95FrameTimeMs || 0).toFixed(1) + ' ms</strong></div>' +
+          '<div class="col-md-2 text-center mb-2"><div class="text-secondary">P99 Frame</div><strong>' + (ft.p99FrameTimeMs || 0).toFixed(1) + ' ms</strong></div>' +
+          '<div class="col-md-2 text-center mb-2"><div class="text-secondary">Stutters</div><strong>' + (ft.stutterCount || 0) + '</strong></div>' +
+          '<div class="col-md-2 text-center mb-2"><div class="text-secondary">Present Mode</div><strong class="small">' + (ft.presentMode || 'N/A') + '</strong></div>' +
+          (ft.trackedApplication ? '<div class="col-12 text-center"><span class="badge bg-azure">' + ft.trackedApplication + '</span></div>' : '') +
+          (ft.notes && ft.notes.length ? '<div class="col-12 mt-2">' + ft.notes.map(function(n) { return '<div class="alert alert-info py-1 mb-1">' + n + '</div>'; }).join('') + '</div>' : '');
+        show('frame-timing-section');
+      } else {
+        hide('frame-timing-section');
+      }
+
+      // --- Recommendations ---
+      if (d.recommendations && d.recommendations.length > 0) {
+        var highRecs = d.recommendations.filter(function(r) { return r.confidence === 'high'; });
+        var medRecs = d.recommendations.filter(function(r) { return r.confidence === 'medium'; });
+        var lowRecs = d.recommendations.filter(function(r) { return r.confidence === 'low'; });
+
+        var recHtml = '';
+
+        if (highRecs.length > 0) {
+          recHtml += '<h4 class="mb-2">High Confidence</h4>';
+          highRecs.sort(function(a,b) { return b.priority - a.priority; });
+          highRecs.forEach(function(r) {
+            recHtml += '<div class="alert alert-' + severityColor(r.severity) + ' recommendation-high mb-2">' +
+              '<div class="d-flex align-items-center mb-1">' +
+              '<strong>' + r.title + '</strong>' +
+              '<span class="badge bg-' + severityColor(r.severity) + ' ms-2">' + r.severity + '</span>' +
+              confidenceBadge(r.confidence) +
+              '<span class="badge bg-purple ms-1">' + r.category + '</span>' +
+              '</div>' +
+              '<div>' + r.body + '</div>' +
+              '</div>';
+          });
+        }
+
+        if (medRecs.length > 0) {
+          recHtml += '<h4 class="mb-2 mt-3">Medium Confidence</h4>';
+          medRecs.sort(function(a,b) { return b.priority - a.priority; });
+          medRecs.forEach(function(r) {
+            recHtml += '<div class="alert alert-' + severityColor(r.severity) + ' recommendation-medium mb-2">' +
+              '<div class="d-flex align-items-center mb-1">' +
+              '<strong>' + r.title + '</strong>' +
+              '<span class="badge bg-' + severityColor(r.severity) + ' ms-2">' + r.severity + '</span>' +
+              confidenceBadge(r.confidence) +
+              '<span class="badge bg-purple ms-1">' + r.category + '</span>' +
+              '</div>' +
+              '<div>' + r.body + '</div>' +
+              '</div>';
+          });
+        }
+
+        if (lowRecs.length > 0) {
+          recHtml += '<div class="mt-3"><a class="text-secondary" data-bs-toggle="collapse" href="#low-conf-recs">Configuration Suggestions (' + lowRecs.length + ')</a>' +
+            '<div class="collapse mt-2" id="low-conf-recs">';
+          lowRecs.forEach(function(r) {
+            recHtml += '<div class="alert alert-' + severityColor(r.severity) + ' recommendation-low mb-2">' +
+              '<div class="d-flex align-items-center mb-1">' +
+              '<strong>' + r.title + '</strong>' +
+              '<span class="badge bg-' + severityColor(r.severity) + ' ms-2">' + r.severity + '</span>' +
+              confidenceBadge(r.confidence) +
+              '</div>' +
+              '<div>' + r.body + '</div>' +
+              '</div>';
+          });
+          recHtml += '</div></div>';
+        }
+
+        el('recommendations-body').innerHTML = recHtml;
+        show('recommendations-section');
+      } else {
+        hide('recommendations-section');
+      }
+
+      // --- Culprit Attribution ---
+      if (d.culpritAttribution && d.culpritAttribution.hasAttribution) {
+        var ca = d.culpritAttribution;
+        var culpritHtml = '';
+
+        if (ca.topProcesses && ca.topProcesses.length > 0) {
+          culpritHtml += '<h4 class="mb-2">Top Processes (Context Switches)</h4>' +
+            '<table class="table table-vcenter table-sm"><thead><tr><th>Process</th><th>%</th><th>Correlation</th><th>Description</th></tr></thead><tbody>';
+          ca.topProcesses.forEach(function(p) {
+            culpritHtml += '<tr><td class="culprit-name">' + p.name + '</td>' +
+              '<td>' + (p.contextSwitchPct || 0).toFixed(1) + '%</td>' +
+              '<td>' + (p.correlationWithStutter ? (p.correlationWithStutter * 100).toFixed(0) + '%' : 'N/A') + '</td>' +
+              '<td>' + (p.description || '') + '</td></tr>';
+          });
+          culpritHtml += '</tbody></table>';
+        }
+
+        if (ca.topDpcDrivers && ca.topDpcDrivers.length > 0) {
+          culpritHtml += '<h4 class="mb-2 mt-3">DPC Drivers</h4>' +
+            '<table class="table table-vcenter table-sm"><thead><tr><th>Driver</th><th>DPC Time %</th><th>Description</th></tr></thead><tbody>';
+          ca.topDpcDrivers.forEach(function(d) {
+            culpritHtml += '<tr><td class="culprit-name">' + d.module + '</td>' +
+              '<td>' + (d.dpcTimePct || 0).toFixed(1) + '%</td>' +
+              '<td>' + (d.description || '') + '</td></tr>';
+          });
+          culpritHtml += '</tbody></table>';
+        }
+
+        if (ca.topDiskProcesses && ca.topDiskProcesses.length > 0) {
+          culpritHtml += '<h4 class="mb-2 mt-3">Top Disk I/O Processes</h4>' +
+            '<table class="table table-vcenter table-sm"><thead><tr><th>Process</th><th>Disk I/O %</th><th>Description</th></tr></thead><tbody>';
+          ca.topDiskProcesses.forEach(function(p) {
+            culpritHtml += '<tr><td class="culprit-name">' + p.name + '</td>' +
+              '<td>' + (p.diskIoPct || 0).toFixed(1) + '%</td>' +
+              '<td>' + (p.description || '') + '</td></tr>';
+          });
+          culpritHtml += '</tbody></table>';
+        }
+
+        el('culprit-body').innerHTML = culpritHtml;
+        show('culprit-section');
+      } else {
+        hide('culprit-section');
+      }
+
+      // --- Baseline Comparison ---
+      if (d.baselineComparison && d.baselineComparison.deltas && d.baselineComparison.deltas.length > 0) {
+        var bc = d.baselineComparison;
+        var baseHtml = '';
+        bc.deltas.forEach(function(delta) {
+          baseHtml += '<tr>' +
+            '<td>' + delta.metric + '</td>' +
+            '<td>' + delta.baselineValue.toFixed(1) + '</td>' +
+            '<td>' + delta.currentValue.toFixed(1) + '</td>' +
+            '<td>' + deltaArrow(delta.change) + '</td>' +
+            '<td>' + deltaVerdict(delta.change) + '</td>' +
+            '</tr>';
+        });
+        el('baseline-tbody').innerHTML = baseHtml;
+        show('baseline-section');
+      } else {
+        hide('baseline-section');
+      }
+
+      // --- Hardware Inventory ---
+      if (d.hardwareInventory) {
+        var hw = d.hardwareInventory;
+        el('hardware-body').innerHTML =
+          '<div class="col-md-6"><div class="list-group list-group-flush">' +
+          '<div class="list-group-item"><strong>CPU:</strong> ' + hw.cpuModel + ' (' + hw.cpuCores + 'C/' + hw.cpuThreads + 'T, ' + hw.cpuBaseClockMhz + '-' + hw.cpuMaxBoostClockMhz + ' MHz)</div>' +
+          '<div class="list-group-item"><strong>GPU:</strong> ' + (hw.gpuModel || 'N/A') + (hw.gpuVramMb ? ' (' + (hw.gpuVramMb/1024).toFixed(0) + ' GB VRAM)' : '') + '</div>' +
+          '<div class="list-group-item"><strong>RAM:</strong> ' + hw.totalRamGb + ' GB (' + hw.ramSticks.map(function(r) { return (r.capacityBytes/1073741824).toFixed(0) + 'GB ' + r.memoryType + '-' + r.speedMhz; }).join(', ') + ')</div>' +
+          '<div class="list-group-item"><strong>Display:</strong> ' + hw.displayResolution + ' @ ' + hw.displayRefreshRate + ' Hz</div>' +
+          '</div></div>' +
+          '<div class="col-md-6"><div class="list-group list-group-flush">' +
+          '<div class="list-group-item"><strong>Storage:</strong> ' + hw.disks.map(function(d) { return d.model + ' (' + d.driveType + ')'; }).join(', ') + '</div>' +
+          '<div class="list-group-item"><strong>Motherboard:</strong> ' + hw.motherboardModel + '</div>' +
+          '<div class="list-group-item"><strong>BIOS:</strong> ' + hw.biosVersion + ' (' + hw.biosDate + ')</div>' +
+          '<div class="list-group-item"><strong>OS:</strong> ' + hw.osVersion + ' (Build ' + hw.osBuild + ')</div>' +
+          '</div></div>';
+      }
+
+      // --- System Configuration Audit ---
+      if (d.systemConfiguration) {
+        var sc = d.systemConfiguration;
+        function cfgItem(label, value, goodCondition) {
+          var icon = goodCondition ? '\u2705' : '\u26A0\uFE0F';
+          return '<div class="list-group-item d-flex justify-content-between align-items-center">' +
+            '<span>' + icon + ' ' + label + '</span><span>' + value + '</span></div>';
+        }
+
+        el('sysconfig-list').innerHTML =
+          cfgItem('Power Plan', sc.powerPlan, sc.powerPlan.toLowerCase().indexOf('high') >= 0) +
+          cfgItem('Game Mode', sc.gameModeEnabled ? 'Enabled' : 'Disabled', sc.gameModeEnabled) +
+          cfgItem('HAGS', sc.hagsEnabled ? 'Enabled' : 'Disabled', sc.hagsEnabled) +
+          cfgItem('Game DVR', sc.gameDvrEnabled ? 'Enabled' : 'Disabled', !sc.gameDvrEnabled) +
+          cfgItem('SysMain Service', sc.sysMainRunning ? 'Running' : 'Stopped', !sc.sysMainRunning) +
+          cfgItem('Windows Search', sc.wSearchRunning ? 'Running' : 'Stopped', !sc.wSearchRunning) +
+          cfgItem('Shader Cache', sc.shaderCacheSizeMb + ' MB', true) +
+          cfgItem('Temp Folder', sc.tempFolderSizeMb + ' MB', sc.tempFolderSizeMb < 5000) +
+          cfgItem('Pagefile', sc.pagefileConfig, true) +
+          cfgItem('Startup Programs', sc.startupProgramCount, sc.startupProgramCount < 20) +
+          cfgItem('Antivirus', sc.avProduct, true);
+      }
+
+      // --- Self Overhead ---
+      if (d.selfOverhead) {
+        var so = d.selfOverhead;
+        el('overhead-row').innerHTML =
+          '<div class="col"><div class="text-secondary">Avg CPU</div><strong>' + so.avgCpuPercent.toFixed(1) + '%</strong></div>' +
+          '<div class="col"><div class="text-secondary">Peak Memory</div><strong>' + formatBytes(so.peakWorkingSetBytes) + '</strong></div>' +
+          '<div class="col"><div class="text-secondary">GC Collections</div><strong>' + so.gcCollections + '</strong></div>' +
+          '<div class="col"><div class="text-secondary">GC Pause</div><strong>' + so.gcPauseTimeMs.toFixed(1) + ' ms</strong></div>' +
+          '<div class="col"><div class="text-secondary">ETW Events Lost</div><strong>' + so.etwEventsLost + '</strong></div>';
+      }
+
+      // --- Footer ---
+      el('footer-text').textContent = 'SysAnalyzer v' + d.metadata.version +
+        ' \u2022 ' + d.metadata.captureId +
+        ' \u2022 ' + d.metadata.profile +
+        ' \u2022 ' + d.metadata.tier +
+        ' \u2022 ' + formatDuration(d.metadata.durationSeconds);
+
+      // --- Charts ---
+      var charts = d.charts || {};
+      var tablerColors = ['#206bc4','#2fb344','#f76707','#d63939','#ae3ec9','#0ca678','#4263eb','#f59f00'];
+
+      function commonChartOpts(type) {
+        return {
+          chart: { type: type, height: 260, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit' },
+          colors: tablerColors,
+          stroke: { width: 2, curve: 'smooth' },
+          grid: { borderColor: '#e6e7e9', strokeDashArray: 4 },
+          tooltip: { theme: 'light' },
+          legend: { position: 'top', fontSize: '11px' }
+        };
+      }
+
+      function renderTimeSeriesChart(elId, chartData, extraOpts) {
+        if (!chartData || !chartData.series) return;
+        var opts = commonChartOpts(chartData.type || 'line');
+        opts.series = chartData.series.map(function(s) {
+          return { name: s.name, data: s.data.map(function(p) { return { x: p.x * 1000, y: p.y }; }) };
+        });
+        opts.xaxis = { type: 'numeric', labels: { formatter: function(v) { return formatSeconds(v / 1000); } } };
+        opts.yaxis = { labels: { formatter: function(v) { return v.toFixed(1); } } };
+
+        if (chartData.dualAxis) {
+          opts.yaxis = [
+            { labels: { formatter: function(v) { return v.toFixed(1); } }, title: { text: chartData.series[0].name } },
+            { opposite: true, labels: { formatter: function(v) { return v.toFixed(1); } }, title: { text: chartData.series.length > 2 ? chartData.series[2].name : chartData.series[1].name } }
+          ];
+          opts.series.forEach(function(s, i) {
+            var yi = chartData.series[i].yAxisIndex;
+            if (yi !== undefined) { /* ApexCharts uses yAxisIndex in series config */ }
+          });
+        }
+
+        if (chartData.threshold) {
+          opts.annotations = { yaxis: [{ y: chartData.threshold, borderColor: '#d63939', strokeDashArray: 4, label: { text: chartData.threshold + '%', style: { color: '#d63939' } } }] };
+        }
+
+        if (extraOpts) { for (var k in extraOpts) { opts[k] = extraOpts[k]; } }
+
+        var chart = new ApexCharts(el(elId), opts);
+        chart.render();
+      }
+
+      // Render system charts
+      if (charts.cpuUtilization) { renderTimeSeriesChart('chart-cpu', charts.cpuUtilization); }
+      else { hide('chart-cpu-container'); }
+
+      if (charts.memoryUtilization) { renderTimeSeriesChart('chart-memory', charts.memoryUtilization); }
+      else { hide('chart-memory-container'); }
+
+      if (charts.gpuLoad) { renderTimeSeriesChart('chart-gpu', charts.gpuLoad); }
+      else { hide('chart-gpu-container'); }
+
+      if (charts.diskActivity) { renderTimeSeriesChart('chart-disk', charts.diskActivity); }
+      else { hide('chart-disk-container'); }
+
+      if (charts.networkThroughput) { renderTimeSeriesChart('chart-network', charts.networkThroughput); }
+      else { hide('chart-network-container'); }
+
+      // Frame charts
+      if (charts.frameTimeOverTime) { renderTimeSeriesChart('chart-frametime', charts.frameTimeOverTime); }
+      else { hide('chart-frametime-container'); }
+
+      if (charts.fpsOverTime) { renderTimeSeriesChart('chart-fps', charts.fpsOverTime); }
+      else { hide('chart-fps-container'); }
+
+      // Histogram (bar chart)
+      if (charts.frameTimeDistribution) {
+        var hd = charts.frameTimeDistribution;
+        var histOpts = commonChartOpts('bar');
+        histOpts.series = hd.series;
+        histOpts.xaxis = { categories: hd.categories };
+        histOpts.yaxis = { logarithmic: hd.logarithmic || false, labels: { formatter: function(v) { return Math.round(v); } } };
+        histOpts.plotOptions = { bar: { borderRadius: 2, columnWidth: '60%' } };
+        var histChart = new ApexCharts(el('chart-histogram'), histOpts);
+        histChart.render();
+      } else {
+        hide('chart-histogram-container');
+      }
+
+    })();
+  </script>
+</body>
+</html>

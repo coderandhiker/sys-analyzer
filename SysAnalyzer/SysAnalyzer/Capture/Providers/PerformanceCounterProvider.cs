@@ -7,6 +7,7 @@ public sealed class PerformanceCounterProvider : IPolledProvider
     public ProviderHealth Health { get; private set; } = new(ProviderStatus.Active, null, 0, 0, 0);
 
     private readonly IPerfCounterFactory _factory;
+    private readonly double _totalPhysicalMemoryMb;
 
     // Pre-allocated batch — reused every poll to avoid heap allocations
     private MetricBatch _batch;
@@ -23,8 +24,6 @@ public sealed class PerformanceCounterProvider : IPolledProvider
     private IPerfCounterHandle? _memCommittedBytes;
     private IPerfCounterHandle? _memPoolNonpaged;
     private IPerfCounterHandle? _memCacheBytes;
-    private IPerfCounterHandle? _gpuEngine;
-    private IPerfCounterHandle? _gpuMemory;
     private IPerfCounterHandle? _diskTime;
     private IPerfCounterHandle? _diskQueueLength;
     private IPerfCounterHandle? _diskBytesPerSec;
@@ -44,6 +43,7 @@ public sealed class PerformanceCounterProvider : IPolledProvider
     public PerformanceCounterProvider(IPerfCounterFactory? factory = null)
     {
         _factory = factory ?? new SystemPerfCounterFactory();
+        _totalPhysicalMemoryMb = GetTotalPhysicalMemoryMb();
     }
 
     public Task<ProviderHealth> InitAsync()
@@ -61,8 +61,6 @@ public sealed class PerformanceCounterProvider : IPolledProvider
             ("Memory", "Committed Bytes", "", h => _memCommittedBytes = h),
             ("Memory", "Pool Nonpaged Bytes", "", h => _memPoolNonpaged = h),
             ("Memory", "Cache Bytes", "", h => _memCacheBytes = h),
-            ("GPU Engine", "Utilization Percentage", "_Total", h => _gpuEngine = h),
-            ("GPU Process Memory", "Dedicated Usage", "_Total", h => _gpuMemory = h),
             ("PhysicalDisk", "% Disk Time", "_Total", h => _diskTime = h),
             ("PhysicalDisk", "Avg. Disk Queue Length", "_Total", h => _diskQueueLength = h),
             ("PhysicalDisk", "Disk Bytes/sec", "_Total", h => _diskBytesPerSec = h),
@@ -121,17 +119,18 @@ public sealed class PerformanceCounterProvider : IPolledProvider
         _batch.HardFaultsPerSec = SafeRead(_memPagesPerSec);
         _batch.CommittedBytes = SafeRead(_memCommittedBytes);
 
-        // Compute memory utilization: if available MB and committed % both present
-        if (_memAvailableMb != null && _memCommittedPct != null)
+        // Compute memory utilization from physical RAM, not commit charge
+        if (_memAvailableMb != null && _totalPhysicalMemoryMb > 0)
         {
+            double availableMb = _batch.AvailableMemoryMb;
+            _batch.MemoryUtilizationPercent = Math.Clamp(
+                (_totalPhysicalMemoryMb - availableMb) / _totalPhysicalMemoryMb * 100.0, 0, 100);
+        }
+        else if (_memCommittedPct != null)
+        {
+            // Fallback to commit charge if we can't determine physical RAM
             _batch.MemoryUtilizationPercent = _batch.CommittedBytesInUsePercent;
         }
-
-        // GPU counters — may not exist
-        var gpuUtil = SafeReadNullable(_gpuEngine);
-        var gpuMem = SafeReadNullable(_gpuMemory);
-        _batch.GpuUtilizationPercent = gpuUtil ?? double.NaN;
-        _batch.GpuMemoryUsedMb = gpuMem.HasValue ? gpuMem.Value / (1024.0 * 1024.0) : double.NaN;
 
         _batch.DiskActiveTimePercent = SafeRead(_diskTime);
         _batch.DiskQueueLength = SafeRead(_diskQueueLength);
@@ -152,13 +151,6 @@ public sealed class PerformanceCounterProvider : IPolledProvider
         catch { return 0; }
     }
 
-    private static double? SafeReadNullable(IPerfCounterHandle? handle)
-    {
-        if (handle == null) return null;
-        try { return handle.NextValue(); }
-        catch { return null; }
-    }
-
     public void Dispose()
     {
         _cpuTotal?.Dispose();
@@ -172,8 +164,6 @@ public sealed class PerformanceCounterProvider : IPolledProvider
         _memCommittedBytes?.Dispose();
         _memPoolNonpaged?.Dispose();
         _memCacheBytes?.Dispose();
-        _gpuEngine?.Dispose();
-        _gpuMemory?.Dispose();
         _diskTime?.Dispose();
         _diskQueueLength?.Dispose();
         _diskBytesPerSec?.Dispose();
@@ -185,5 +175,18 @@ public sealed class PerformanceCounterProvider : IPolledProvider
         _systemThreads?.Dispose();
         _handleCount?.Dispose();
         _systemUpTime?.Dispose();
+    }
+
+    private static double GetTotalPhysicalMemoryMb()
+    {
+        try
+        {
+            var memInfo = GC.GetGCMemoryInfo();
+            return memInfo.TotalAvailableMemoryBytes / (1024.0 * 1024.0);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 }

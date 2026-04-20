@@ -23,6 +23,12 @@
 
   <ItemGroup>
     <EmbeddedResource Include="config.yaml" />
+    <EmbeddedResource Include="Report\Assets\tabler.min.css" />
+    <EmbeddedResource Include="Report\Assets\tabler.js" />
+    <EmbeddedResource Include="Report\Assets\tabler-theme.js" />
+    <EmbeddedResource Include="Report\Assets\apexcharts.min.js" />
+    <EmbeddedResource Include="Report\Assets\report.css" />
+    <EmbeddedResource Include="Report\Templates\report-template.html" />
   </ItemGroup>
 
 </Project>
