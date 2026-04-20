@@ -17,6 +17,7 @@ public static class ConfigLoader
         .IgnoreUnmatchedProperties()
         .Build();
 
+    public static AnalyzerConfig LoadDefault() => Load();
     public static AnalyzerConfig Load(string? explicitPath = null)
     {
         var yaml = LoadYamlText(explicitPath);
