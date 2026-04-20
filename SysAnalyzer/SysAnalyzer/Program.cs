@@ -11,6 +11,9 @@ using SysAnalyzer.Cli;
 using SysAnalyzer.Config;
 using SysAnalyzer.Report;
 
+// Detect interactive launch (double-click with no args)
+bool isInteractiveLaunch = args.Length == 0 && !Console.IsInputRedirected && !Console.IsOutputRedirected;
+
 // Parse CLI arguments
 CliOptions options;
 try
@@ -21,7 +24,14 @@ catch (ArgumentException ex)
 {
     Console.Error.WriteLine($"Error: {ex.Message}");
     Console.Error.WriteLine("Run with --help for usage information.");
+    if (isInteractiveLaunch) WaitForKeypress();
     return 1;
+}
+
+// Default to 5 minutes when launched interactively with no arguments
+if (isInteractiveLaunch && !options.Duration.HasValue)
+{
+    options.Duration = 300;
 }
 
 if (options.Help)
@@ -582,12 +592,20 @@ try
         Console.WriteLine($"  ETW events: {etwCount}");
     Console.WriteLine();
 
+    if (isInteractiveLaunch) WaitForKeypress();
     return 0;
 }
 catch (Exception ex)
 {
     Console.Error.WriteLine($"Error: {ex.Message}");
+    if (isInteractiveLaunch) WaitForKeypress();
     return 3;
+}
+
+static void WaitForKeypress()
+{
+    Console.WriteLine("Press any key to exit...");
+    try { Console.ReadKey(intercept: true); } catch { }
 }
 
 static HardwareInventory CreateDefaultHardware() => new(

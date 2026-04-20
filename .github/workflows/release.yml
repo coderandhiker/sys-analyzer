@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Restore
+        run: dotnet restore SysAnalyzer/SysAnalyzer.sln
+
+      - name: Test
+        run: dotnet test SysAnalyzer/SysAnalyzer.Tests/SysAnalyzer.Tests.csproj -c Release --verbosity normal
+
+      - name: Publish self-contained
+        run: dotnet publish SysAnalyzer/SysAnalyzer/SysAnalyzer.csproj -p:PublishProfile=win-x64-self-contained
+
+      - name: Create zip
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          Compress-Archive -Path SysAnalyzer/SysAnalyzer/bin/publish/SysAnalyzer.exe -DestinationPath "SysAnalyzer-$tag-win-x64.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: SysAnalyzer-*.zip
