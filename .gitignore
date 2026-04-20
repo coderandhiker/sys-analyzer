@@ -66,3 +66,7 @@ test-captures/
 
 # Report output
 SysAnalyzer/reports/
+
+# Build artifacts
+*.zip
+SysAnalyzer/SysAnalyzer/bin/publish/
