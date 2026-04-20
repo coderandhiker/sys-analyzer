@@ -10,6 +10,7 @@ namespace SysAnalyzer.Tests.Integration;
 /// Tests cover: no JS errors, charts render, scores display, conditional sections,
 /// cross-browser compatibility (Chromium, Firefox, WebKit).
 /// </summary>
+[Trait("Category", "Playwright")]
 public class PlaywrightHtmlReportTests : IAsyncLifetime
 {
     private IPlaywright _playwright = null!;

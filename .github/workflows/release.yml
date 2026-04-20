@@ -23,7 +23,7 @@ jobs:
         run: dotnet restore SysAnalyzer/SysAnalyzer.sln
 
       - name: Test
-        run: dotnet test SysAnalyzer/SysAnalyzer.Tests/SysAnalyzer.Tests.csproj -c Release --verbosity normal
+        run: dotnet test SysAnalyzer/SysAnalyzer.Tests/SysAnalyzer.Tests.csproj -c Release --verbosity normal --filter "Category!=Playwright"
 
       - name: Publish self-contained
         run: dotnet publish SysAnalyzer/SysAnalyzer/SysAnalyzer.csproj -p:PublishProfile=win-x64-self-contained

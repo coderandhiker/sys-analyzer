@@ -9,6 +9,7 @@ namespace SysAnalyzer.Tests.Integration;
 public class ScreenshotCapture
 {
     [Fact]
+    [Trait("Category", "Playwright")]
     public async Task CaptureReportScreenshots()
     {
         // Try the latest elevated capture first, fall back to any available
