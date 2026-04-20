@@ -458,7 +458,7 @@ public sealed class SystemProcessLauncher : IPresentMonProcessLauncher
     {
         try
         {
-            Console.Write("  Downloading PresentMon 1.10.0...");
+            Console.Write("  Downloading PresentMon 1.10.0 (Intel, MIT license) from GitHub...");
             using var httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromSeconds(30);
             using var response = httpClient.GetAsync(DownloadUrl).GetAwaiter().GetResult();
