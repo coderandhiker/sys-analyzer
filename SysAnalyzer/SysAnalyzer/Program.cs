@@ -416,6 +416,7 @@ Console.CancelKeyPress += (_, e) =>
     if (session.State == CaptureState.Capturing)
     {
         Console.WriteLine("\nStopping capture...");
+        cts.Cancel();
         session.RequestStop();
     }
     // During Analyzing/Emitting — let it finish
@@ -539,8 +540,8 @@ try
         liveDisplay.Start();
     }
 
-    // Key detection (Q/Esc) in a separate loop if not --no-live and not duration-only
-    if (!options.NoLive && !options.Duration.HasValue && !Console.IsInputRedirected)
+    // Key detection (Q/Esc) in a separate loop
+    if (!options.NoLive && !Console.IsInputRedirected)
     {
         _ = Task.Run(() =>
         {
@@ -551,6 +552,7 @@ try
                     var key = Console.ReadKey(intercept: true);
                     if (key.Key == ConsoleKey.Q || key.Key == ConsoleKey.Escape)
                     {
+                        cts.Cancel();
                         session.RequestStop();
                         break;
                     }
